@@ -16,14 +16,18 @@ float_number {number}+"."{number}+
 cplus_comment "//".*
 %x string
 %x c_comment
+%x sign
 
 /* Rules section */
 %%
-{whitespace}	{;}
+
 "\n"	{ ; total_line++; }
 "+" 	{ printf("%s \t ADD\n", yytext); }
-"-"^{digit}		{ yyless(yyleng-1); printf("%s \t SUB\n", yytext); }
-"-"{digit}+		{ printf("%s \t I_CONST\n", yytext); }
+"-"		{ yyless(yyleng-1); BEGIN sign; }
+		<sign>"-"{number}	{ printf("%s \t I_CONST\n", yytext);  BEGIN 0;}
+		<sign>"-"{float_number}	{ printf("%s \t F_CONST\n", yytext); BEGIN 0;}
+		<sign>"-" { printf("%s \t SUB\n", yytext); BEGIN 0;}
+
 "*"		{ printf("%s \t MUL\n", yytext); }
 "/"		{ printf("%s \t DIV\n", yytext); }
 "%"		{ printf("%s \t MOD\n", yytext); }
@@ -79,6 +83,8 @@ cplus_comment "//".*
 		<c_comment>[^*^\n]*	{ printf("%s", yytext); }
 		<c_comment>"\n"	{ printf("%s", yytext); comment_line++; total_line++; }
 		<c_comment>"*/" { printf("%s \t C Comment\n", yytext); comment_line++; BEGIN 0; }
+{whitespace}	{;}
+
 %%
 
 /*	C Code section */
