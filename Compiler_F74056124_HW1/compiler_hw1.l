@@ -52,9 +52,10 @@ cplus_comment "//".*
 ","		{ printf("%s \t COMMA\n", yytext); }
 ";"		{ printf("%s \t SEMICOLON\n", yytext); }
 "\""	{ printf("%s \t QUOTA\n", yytext); BEGIN string;}
-		<string>[^"^\n]+	{ printf("%s \t STR_CONST\n", yytext); }
+		<string>"\\\""		{ printf("%s", yytext); }
+		<string>[^"^\n]+	{ printf("%s", yytext); }
 		<string>[^"]+"\n"	{ printf("%s", yytext); }
-		<string>\"	{ printf("%s \t QUOTA\n", yytext); BEGIN 0; }
+		<string>\"	{ printf(" \t STR_CONST\n%s \t QUOTA\n", yytext); BEGIN 0; }
 "print"		{ printf("%s \t PRINT\n", yytext); }
 "if"		{ printf("%s \t IF\n", yytext); }
 "else"		{ printf("%s \t ELSE\n", yytext); }
