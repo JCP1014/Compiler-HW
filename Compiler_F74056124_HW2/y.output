@@ -1,0 +1,2163 @@
+Terminals unused in grammar
+
+   FOR
+   LSB
+   RSB
+   QUOTA
+   CONT
+   BREAK
+
+
+State 27 conflicts: 2 shift/reduce
+State 35 conflicts: 2 shift/reduce, 6 reduce/reduce
+State 80 conflicts: 6 shift/reduce
+State 81 conflicts: 6 shift/reduce
+State 82 conflicts: 6 shift/reduce
+State 83 conflicts: 6 shift/reduce
+State 84 conflicts: 6 shift/reduce
+State 85 conflicts: 6 shift/reduce
+State 87 conflicts: 2 reduce/reduce
+State 91 conflicts: 6 shift/reduce
+State 92 conflicts: 6 shift/reduce
+State 93 conflicts: 6 shift/reduce
+State 94 conflicts: 6 shift/reduce
+State 95 conflicts: 6 shift/reduce
+State 96 conflicts: 6 shift/reduce
+State 97 conflicts: 2 shift/reduce, 6 reduce/reduce
+State 98 conflicts: 2 shift/reduce, 6 reduce/reduce
+State 113 conflicts: 1 reduce/reduce
+State 114 conflicts: 1 reduce/reduce
+State 115 conflicts: 1 reduce/reduce
+State 116 conflicts: 1 reduce/reduce
+State 117 conflicts: 1 reduce/reduce
+State 118 conflicts: 1 reduce/reduce
+
+
+Grammar
+
+    0 $accept: program $end
+
+    1 program: program stat
+    2        | %empty
+
+    3 stat: declaration SEMICOLON
+    4     | expression_stat SEMICOLON
+    5     | compound_stat
+    6     | print_func SEMICOLON
+    7     | COMMENTLINE
+    8     | NEWLINE
+
+    9 declaration: type ID ASGN initializer
+   10            | type ID
+   11            | type ID LB parameter_list RB
+   12            | type ID LB RB
+
+   13 expression_stat: val expr
+   14                | assignment
+   15                | condition
+   16                | RET expr
+   17                | ID LB argument_list RB
+   18                | ID LB RB
+
+   19 expr: ADD val expr
+   20     | SUB val expr
+   21     | term
+
+   22 term: unary
+   23     | MUL val expr
+   24     | DIV val expr
+   25     | MOD val expr
+   26     | %empty
+
+   27 unary: val
+   28      | INC
+   29      | DEC
+
+   30 assignment: ID ASGN expression_stat
+   31           | ID ADDASGN expression_stat
+   32           | ID SUBASGN expression_stat
+   33           | ID MULASGN expression_stat
+   34           | ID DIVASGN expression_stat
+   35           | ID MODASGN expression_stat
+
+   36 compound_stat: IF LB expression_stat RB LCB
+   37              | RCB ELSE IF LB expression_stat RB LCB
+   38              | RCB ELSE LCB
+   39              | WHILE LB expression_stat RB LCB
+   40              | type ID LB parameter_list RB LCB
+   41              | type ID LB RB LCB
+   42              | RCB
+
+   43 condition: expression_stat MT expression_stat
+   44          | expression_stat LT expression_stat
+   45          | expression_stat MTE expression_stat
+   46          | expression_stat LTE expression_stat
+   47          | expression_stat EQ expression_stat
+   48          | expression_stat NE expression_stat
+   49          | condition AND condition
+   50          | condition OR condition
+   51          | NOT condition
+
+   52 print_func: PRINT LB STR_CONST RB
+   53           | PRINT LB ID RB
+
+   54 initializer: I_CONST
+   55            | F_CONST
+   56            | TRUE
+   57            | FALSE
+   58            | ID
+   59            | STR_CONST
+   60            | expression_stat
+
+   61 parameter_list: parameter
+   62               | parameter_list COMMA parameter
+
+   63 parameter: type ID
+
+   64 argument_list: argument
+   65              | argument_list COMMA argument
+
+   66 argument: ID
+   67         | expression_stat
+
+   68 val: ID
+   69    | I_CONST
+   70    | F_CONST
+   71    | STR_CONST
+   72    | TRUE
+   73    | FALSE
+
+   74 type: INT
+   75     | FLOAT
+   76     | BOOL
+   77     | STRING
+   78     | VOID
+
+
+Terminals, with rules where they appear
+
+$end (0) 0
+error (256)
+PRINT (258) 52 53
+IF (259) 36 37
+ELSE (260) 37 38
+FOR (261)
+WHILE (262) 39
+SEMICOLON (263) 3 4 6
+ADD (264) 19
+SUB (265) 20
+MUL (266) 23
+DIV (267) 24
+MOD (268) 25
+INC (269) 28
+DEC (270) 29
+MT (271) 43
+LT (272) 44
+MTE (273) 45
+LTE (274) 46
+EQ (275) 47
+NE (276) 48
+ASGN (277) 9 30
+ADDASGN (278) 31
+SUBASGN (279) 32
+MULASGN (280) 33
+DIVASGN (281) 34
+MODASGN (282) 35
+AND (283) 49
+OR (284) 50
+NOT (285) 51
+LB (286) 11 12 17 18 36 37 39 40 41 52 53
+RB (287) 11 12 17 18 36 37 39 40 41 52 53
+LCB (288) 36 37 38 39 40 41
+RCB (289) 37 38 42
+LSB (290)
+RSB (291)
+COMMA (292) 62 65
+QUOTA (293)
+TRUE (294) 56 72
+FALSE (295) 57 73
+COMMENTLINE (296) 7
+NEWLINE (297) 8
+RET (298) 16
+CONT (299)
+BREAK (300)
+I_CONST (301) 54 69
+F_CONST (302) 55 70
+STR_CONST (303) 52 59 71
+ID (304) 9 10 11 12 17 18 30 31 32 33 34 35 40 41 53 58 63 66 68
+INT (305) 74
+FLOAT (306) 75
+BOOL (307) 76
+STRING (308) 77
+VOID (309) 78
+
+
+Nonterminals, with rules where they appear
+
+$accept (55)
+    on left: 0
+program (56)
+    on left: 1 2, on right: 0 1
+stat (57)
+    on left: 3 4 5 6 7 8, on right: 1
+declaration (58)
+    on left: 9 10 11 12, on right: 3
+expression_stat (59)
+    on left: 13 14 15 16 17 18, on right: 4 30 31 32 33 34 35 36 37
+    39 43 44 45 46 47 48 60 67
+expr (60)
+    on left: 19 20 21, on right: 13 16 19 20 23 24 25
+term (61)
+    on left: 22 23 24 25 26, on right: 21
+unary (62)
+    on left: 27 28 29, on right: 22
+assignment (63)
+    on left: 30 31 32 33 34 35, on right: 14
+compound_stat (64)
+    on left: 36 37 38 39 40 41 42, on right: 5
+condition (65)
+    on left: 43 44 45 46 47 48 49 50 51, on right: 15 49 50 51
+print_func (66)
+    on left: 52 53, on right: 6
+initializer (67)
+    on left: 54 55 56 57 58 59 60, on right: 9
+parameter_list (68)
+    on left: 61 62, on right: 11 40 62
+parameter (69)
+    on left: 63, on right: 61 62
+argument_list (70)
+    on left: 64 65, on right: 17 65
+argument (71)
+    on left: 66 67, on right: 64 65
+val (72)
+    on left: 68 69 70 71 72 73, on right: 13 19 20 23 24 25 27
+type (73)
+    on left: 74 75 76 77 78, on right: 9 10 11 12 40 41 63
+
+
+State 0
+
+    0 $accept: . program $end
+
+    $default  reduce using rule 2 (program)
+
+    program  go to state 1
+
+
+State 1
+
+    0 $accept: program . $end
+    1 program: program . stat
+
+    $end         shift, and go to state 2
+    PRINT        shift, and go to state 3
+    IF           shift, and go to state 4
+    WHILE        shift, and go to state 5
+    NOT          shift, and go to state 6
+    RCB          shift, and go to state 7
+    TRUE         shift, and go to state 8
+    FALSE        shift, and go to state 9
+    COMMENTLINE  shift, and go to state 10
+    NEWLINE      shift, and go to state 11
+    RET          shift, and go to state 12
+    I_CONST      shift, and go to state 13
+    F_CONST      shift, and go to state 14
+    STR_CONST    shift, and go to state 15
+    ID           shift, and go to state 16
+    INT          shift, and go to state 17
+    FLOAT        shift, and go to state 18
+    BOOL         shift, and go to state 19
+    STRING       shift, and go to state 20
+    VOID         shift, and go to state 21
+
+    stat             go to state 22
+    declaration      go to state 23
+    expression_stat  go to state 24
+    assignment       go to state 25
+    compound_stat    go to state 26
+    condition        go to state 27
+    print_func       go to state 28
+    val              go to state 29
+    type             go to state 30
+
+
+State 2
+
+    0 $accept: program $end .
+
+    $default  accept
+
+
+State 3
+
+   52 print_func: PRINT . LB STR_CONST RB
+   53           | PRINT . LB ID RB
+
+    LB  shift, and go to state 31
+
+
+State 4
+
+   36 compound_stat: IF . LB expression_stat RB LCB
+
+    LB  shift, and go to state 32
+
+
+State 5
+
+   39 compound_stat: WHILE . LB expression_stat RB LCB
+
+    LB  shift, and go to state 33
+
+
+State 6
+
+   51 condition: NOT . condition
+
+    NOT        shift, and go to state 6
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 16
+
+    expression_stat  go to state 34
+    assignment       go to state 25
+    condition        go to state 35
+    val              go to state 29
+
+
+State 7
+
+   37 compound_stat: RCB . ELSE IF LB expression_stat RB LCB
+   38              | RCB . ELSE LCB
+   42              | RCB .
+
+    ELSE  shift, and go to state 36
+
+    $default  reduce using rule 42 (compound_stat)
+
+
+State 8
+
+   72 val: TRUE .
+
+    $default  reduce using rule 72 (val)
+
+
+State 9
+
+   73 val: FALSE .
+
+    $default  reduce using rule 73 (val)
+
+
+State 10
+
+    7 stat: COMMENTLINE .
+
+    $default  reduce using rule 7 (stat)
+
+
+State 11
+
+    8 stat: NEWLINE .
+
+    $default  reduce using rule 8 (stat)
+
+
+State 12
+
+   16 expression_stat: RET . expr
+
+    ADD        shift, and go to state 37
+    SUB        shift, and go to state 38
+    MUL        shift, and go to state 39
+    DIV        shift, and go to state 40
+    MOD        shift, and go to state 41
+    INC        shift, and go to state 42
+    DEC        shift, and go to state 43
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 44
+
+    $default  reduce using rule 26 (term)
+
+    expr   go to state 45
+    term   go to state 46
+    unary  go to state 47
+    val    go to state 48
+
+
+State 13
+
+   69 val: I_CONST .
+
+    $default  reduce using rule 69 (val)
+
+
+State 14
+
+   70 val: F_CONST .
+
+    $default  reduce using rule 70 (val)
+
+
+State 15
+
+   71 val: STR_CONST .
+
+    $default  reduce using rule 71 (val)
+
+
+State 16
+
+   17 expression_stat: ID . LB argument_list RB
+   18                | ID . LB RB
+   30 assignment: ID . ASGN expression_stat
+   31           | ID . ADDASGN expression_stat
+   32           | ID . SUBASGN expression_stat
+   33           | ID . MULASGN expression_stat
+   34           | ID . DIVASGN expression_stat
+   35           | ID . MODASGN expression_stat
+   68 val: ID .
+
+    ASGN     shift, and go to state 49
+    ADDASGN  shift, and go to state 50
+    SUBASGN  shift, and go to state 51
+    MULASGN  shift, and go to state 52
+    DIVASGN  shift, and go to state 53
+    MODASGN  shift, and go to state 54
+    LB       shift, and go to state 55
+
+    $default  reduce using rule 68 (val)
+
+
+State 17
+
+   74 type: INT .
+
+    $default  reduce using rule 74 (type)
+
+
+State 18
+
+   75 type: FLOAT .
+
+    $default  reduce using rule 75 (type)
+
+
+State 19
+
+   76 type: BOOL .
+
+    $default  reduce using rule 76 (type)
+
+
+State 20
+
+   77 type: STRING .
+
+    $default  reduce using rule 77 (type)
+
+
+State 21
+
+   78 type: VOID .
+
+    $default  reduce using rule 78 (type)
+
+
+State 22
+
+    1 program: program stat .
+
+    $default  reduce using rule 1 (program)
+
+
+State 23
+
+    3 stat: declaration . SEMICOLON
+
+    SEMICOLON  shift, and go to state 56
+
+
+State 24
+
+    4 stat: expression_stat . SEMICOLON
+   43 condition: expression_stat . MT expression_stat
+   44          | expression_stat . LT expression_stat
+   45          | expression_stat . MTE expression_stat
+   46          | expression_stat . LTE expression_stat
+   47          | expression_stat . EQ expression_stat
+   48          | expression_stat . NE expression_stat
+
+    SEMICOLON  shift, and go to state 57
+    MT         shift, and go to state 58
+    LT         shift, and go to state 59
+    MTE        shift, and go to state 60
+    LTE        shift, and go to state 61
+    EQ         shift, and go to state 62
+    NE         shift, and go to state 63
+
+
+State 25
+
+   14 expression_stat: assignment .
+
+    $default  reduce using rule 14 (expression_stat)
+
+
+State 26
+
+    5 stat: compound_stat .
+
+    $default  reduce using rule 5 (stat)
+
+
+State 27
+
+   15 expression_stat: condition .
+   49 condition: condition . AND condition
+   50          | condition . OR condition
+
+    AND  shift, and go to state 64
+    OR   shift, and go to state 65
+
+    AND       [reduce using rule 15 (expression_stat)]
+    OR        [reduce using rule 15 (expression_stat)]
+    $default  reduce using rule 15 (expression_stat)
+
+
+State 28
+
+    6 stat: print_func . SEMICOLON
+
+    SEMICOLON  shift, and go to state 66
+
+
+State 29
+
+   13 expression_stat: val . expr
+
+    ADD        shift, and go to state 37
+    SUB        shift, and go to state 38
+    MUL        shift, and go to state 39
+    DIV        shift, and go to state 40
+    MOD        shift, and go to state 41
+    INC        shift, and go to state 42
+    DEC        shift, and go to state 43
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 44
+
+    $default  reduce using rule 26 (term)
+
+    expr   go to state 67
+    term   go to state 46
+    unary  go to state 47
+    val    go to state 48
+
+
+State 30
+
+    9 declaration: type . ID ASGN initializer
+   10            | type . ID
+   11            | type . ID LB parameter_list RB
+   12            | type . ID LB RB
+   40 compound_stat: type . ID LB parameter_list RB LCB
+   41              | type . ID LB RB LCB
+
+    ID  shift, and go to state 68
+
+
+State 31
+
+   52 print_func: PRINT LB . STR_CONST RB
+   53           | PRINT LB . ID RB
+
+    STR_CONST  shift, and go to state 69
+    ID         shift, and go to state 70
+
+
+State 32
+
+   36 compound_stat: IF LB . expression_stat RB LCB
+
+    NOT        shift, and go to state 6
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 16
+
+    expression_stat  go to state 71
+    assignment       go to state 25
+    condition        go to state 27
+    val              go to state 29
+
+
+State 33
+
+   39 compound_stat: WHILE LB . expression_stat RB LCB
+
+    NOT        shift, and go to state 6
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 16
+
+    expression_stat  go to state 72
+    assignment       go to state 25
+    condition        go to state 27
+    val              go to state 29
+
+
+State 34
+
+   43 condition: expression_stat . MT expression_stat
+   44          | expression_stat . LT expression_stat
+   45          | expression_stat . MTE expression_stat
+   46          | expression_stat . LTE expression_stat
+   47          | expression_stat . EQ expression_stat
+   48          | expression_stat . NE expression_stat
+
+    MT   shift, and go to state 58
+    LT   shift, and go to state 59
+    MTE  shift, and go to state 60
+    LTE  shift, and go to state 61
+    EQ   shift, and go to state 62
+    NE   shift, and go to state 63
+
+
+State 35
+
+   15 expression_stat: condition .
+   49 condition: condition . AND condition
+   50          | condition . OR condition
+   51          | NOT condition .
+
+    AND  shift, and go to state 64
+    OR   shift, and go to state 65
+
+    SEMICOLON  reduce using rule 51 (condition)
+    MT         reduce using rule 15 (expression_stat)
+    MT         [reduce using rule 51 (condition)]
+    LT         reduce using rule 15 (expression_stat)
+    LT         [reduce using rule 51 (condition)]
+    MTE        reduce using rule 15 (expression_stat)
+    MTE        [reduce using rule 51 (condition)]
+    LTE        reduce using rule 15 (expression_stat)
+    LTE        [reduce using rule 51 (condition)]
+    EQ         reduce using rule 15 (expression_stat)
+    EQ         [reduce using rule 51 (condition)]
+    NE         reduce using rule 15 (expression_stat)
+    NE         [reduce using rule 51 (condition)]
+    AND        [reduce using rule 51 (condition)]
+    OR         [reduce using rule 51 (condition)]
+    RB         reduce using rule 51 (condition)
+    COMMA      reduce using rule 51 (condition)
+    $default   reduce using rule 15 (expression_stat)
+
+
+State 36
+
+   37 compound_stat: RCB ELSE . IF LB expression_stat RB LCB
+   38              | RCB ELSE . LCB
+
+    IF   shift, and go to state 73
+    LCB  shift, and go to state 74
+
+
+State 37
+
+   19 expr: ADD . val expr
+
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 44
+
+    val  go to state 75
+
+
+State 38
+
+   20 expr: SUB . val expr
+
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 44
+
+    val  go to state 76
+
+
+State 39
+
+   23 term: MUL . val expr
+
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 44
+
+    val  go to state 77
+
+
+State 40
+
+   24 term: DIV . val expr
+
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 44
+
+    val  go to state 78
+
+
+State 41
+
+   25 term: MOD . val expr
+
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 44
+
+    val  go to state 79
+
+
+State 42
+
+   28 unary: INC .
+
+    $default  reduce using rule 28 (unary)
+
+
+State 43
+
+   29 unary: DEC .
+
+    $default  reduce using rule 29 (unary)
+
+
+State 44
+
+   68 val: ID .
+
+    $default  reduce using rule 68 (val)
+
+
+State 45
+
+   16 expression_stat: RET expr .
+
+    $default  reduce using rule 16 (expression_stat)
+
+
+State 46
+
+   21 expr: term .
+
+    $default  reduce using rule 21 (expr)
+
+
+State 47
+
+   22 term: unary .
+
+    $default  reduce using rule 22 (term)
+
+
+State 48
+
+   27 unary: val .
+
+    $default  reduce using rule 27 (unary)
+
+
+State 49
+
+   30 assignment: ID ASGN . expression_stat
+
+    NOT        shift, and go to state 6
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 16
+
+    expression_stat  go to state 80
+    assignment       go to state 25
+    condition        go to state 27
+    val              go to state 29
+
+
+State 50
+
+   31 assignment: ID ADDASGN . expression_stat
+
+    NOT        shift, and go to state 6
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 16
+
+    expression_stat  go to state 81
+    assignment       go to state 25
+    condition        go to state 27
+    val              go to state 29
+
+
+State 51
+
+   32 assignment: ID SUBASGN . expression_stat
+
+    NOT        shift, and go to state 6
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 16
+
+    expression_stat  go to state 82
+    assignment       go to state 25
+    condition        go to state 27
+    val              go to state 29
+
+
+State 52
+
+   33 assignment: ID MULASGN . expression_stat
+
+    NOT        shift, and go to state 6
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 16
+
+    expression_stat  go to state 83
+    assignment       go to state 25
+    condition        go to state 27
+    val              go to state 29
+
+
+State 53
+
+   34 assignment: ID DIVASGN . expression_stat
+
+    NOT        shift, and go to state 6
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 16
+
+    expression_stat  go to state 84
+    assignment       go to state 25
+    condition        go to state 27
+    val              go to state 29
+
+
+State 54
+
+   35 assignment: ID MODASGN . expression_stat
+
+    NOT        shift, and go to state 6
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 16
+
+    expression_stat  go to state 85
+    assignment       go to state 25
+    condition        go to state 27
+    val              go to state 29
+
+
+State 55
+
+   17 expression_stat: ID LB . argument_list RB
+   18                | ID LB . RB
+
+    NOT        shift, and go to state 6
+    RB         shift, and go to state 86
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 87
+
+    expression_stat  go to state 88
+    assignment       go to state 25
+    condition        go to state 27
+    argument_list    go to state 89
+    argument         go to state 90
+    val              go to state 29
+
+
+State 56
+
+    3 stat: declaration SEMICOLON .
+
+    $default  reduce using rule 3 (stat)
+
+
+State 57
+
+    4 stat: expression_stat SEMICOLON .
+
+    $default  reduce using rule 4 (stat)
+
+
+State 58
+
+   43 condition: expression_stat MT . expression_stat
+
+    NOT        shift, and go to state 6
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 16
+
+    expression_stat  go to state 91
+    assignment       go to state 25
+    condition        go to state 27
+    val              go to state 29
+
+
+State 59
+
+   44 condition: expression_stat LT . expression_stat
+
+    NOT        shift, and go to state 6
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 16
+
+    expression_stat  go to state 92
+    assignment       go to state 25
+    condition        go to state 27
+    val              go to state 29
+
+
+State 60
+
+   45 condition: expression_stat MTE . expression_stat
+
+    NOT        shift, and go to state 6
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 16
+
+    expression_stat  go to state 93
+    assignment       go to state 25
+    condition        go to state 27
+    val              go to state 29
+
+
+State 61
+
+   46 condition: expression_stat LTE . expression_stat
+
+    NOT        shift, and go to state 6
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 16
+
+    expression_stat  go to state 94
+    assignment       go to state 25
+    condition        go to state 27
+    val              go to state 29
+
+
+State 62
+
+   47 condition: expression_stat EQ . expression_stat
+
+    NOT        shift, and go to state 6
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 16
+
+    expression_stat  go to state 95
+    assignment       go to state 25
+    condition        go to state 27
+    val              go to state 29
+
+
+State 63
+
+   48 condition: expression_stat NE . expression_stat
+
+    NOT        shift, and go to state 6
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 16
+
+    expression_stat  go to state 96
+    assignment       go to state 25
+    condition        go to state 27
+    val              go to state 29
+
+
+State 64
+
+   49 condition: condition AND . condition
+
+    NOT        shift, and go to state 6
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 16
+
+    expression_stat  go to state 34
+    assignment       go to state 25
+    condition        go to state 97
+    val              go to state 29
+
+
+State 65
+
+   50 condition: condition OR . condition
+
+    NOT        shift, and go to state 6
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 16
+
+    expression_stat  go to state 34
+    assignment       go to state 25
+    condition        go to state 98
+    val              go to state 29
+
+
+State 66
+
+    6 stat: print_func SEMICOLON .
+
+    $default  reduce using rule 6 (stat)
+
+
+State 67
+
+   13 expression_stat: val expr .
+
+    $default  reduce using rule 13 (expression_stat)
+
+
+State 68
+
+    9 declaration: type ID . ASGN initializer
+   10            | type ID .
+   11            | type ID . LB parameter_list RB
+   12            | type ID . LB RB
+   40 compound_stat: type ID . LB parameter_list RB LCB
+   41              | type ID . LB RB LCB
+
+    ASGN  shift, and go to state 99
+    LB    shift, and go to state 100
+
+    $default  reduce using rule 10 (declaration)
+
+
+State 69
+
+   52 print_func: PRINT LB STR_CONST . RB
+
+    RB  shift, and go to state 101
+
+
+State 70
+
+   53 print_func: PRINT LB ID . RB
+
+    RB  shift, and go to state 102
+
+
+State 71
+
+   36 compound_stat: IF LB expression_stat . RB LCB
+   43 condition: expression_stat . MT expression_stat
+   44          | expression_stat . LT expression_stat
+   45          | expression_stat . MTE expression_stat
+   46          | expression_stat . LTE expression_stat
+   47          | expression_stat . EQ expression_stat
+   48          | expression_stat . NE expression_stat
+
+    MT   shift, and go to state 58
+    LT   shift, and go to state 59
+    MTE  shift, and go to state 60
+    LTE  shift, and go to state 61
+    EQ   shift, and go to state 62
+    NE   shift, and go to state 63
+    RB   shift, and go to state 103
+
+
+State 72
+
+   39 compound_stat: WHILE LB expression_stat . RB LCB
+   43 condition: expression_stat . MT expression_stat
+   44          | expression_stat . LT expression_stat
+   45          | expression_stat . MTE expression_stat
+   46          | expression_stat . LTE expression_stat
+   47          | expression_stat . EQ expression_stat
+   48          | expression_stat . NE expression_stat
+
+    MT   shift, and go to state 58
+    LT   shift, and go to state 59
+    MTE  shift, and go to state 60
+    LTE  shift, and go to state 61
+    EQ   shift, and go to state 62
+    NE   shift, and go to state 63
+    RB   shift, and go to state 104
+
+
+State 73
+
+   37 compound_stat: RCB ELSE IF . LB expression_stat RB LCB
+
+    LB  shift, and go to state 105
+
+
+State 74
+
+   38 compound_stat: RCB ELSE LCB .
+
+    $default  reduce using rule 38 (compound_stat)
+
+
+State 75
+
+   19 expr: ADD val . expr
+
+    ADD        shift, and go to state 37
+    SUB        shift, and go to state 38
+    MUL        shift, and go to state 39
+    DIV        shift, and go to state 40
+    MOD        shift, and go to state 41
+    INC        shift, and go to state 42
+    DEC        shift, and go to state 43
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 44
+
+    $default  reduce using rule 26 (term)
+
+    expr   go to state 106
+    term   go to state 46
+    unary  go to state 47
+    val    go to state 48
+
+
+State 76
+
+   20 expr: SUB val . expr
+
+    ADD        shift, and go to state 37
+    SUB        shift, and go to state 38
+    MUL        shift, and go to state 39
+    DIV        shift, and go to state 40
+    MOD        shift, and go to state 41
+    INC        shift, and go to state 42
+    DEC        shift, and go to state 43
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 44
+
+    $default  reduce using rule 26 (term)
+
+    expr   go to state 107
+    term   go to state 46
+    unary  go to state 47
+    val    go to state 48
+
+
+State 77
+
+   23 term: MUL val . expr
+
+    ADD        shift, and go to state 37
+    SUB        shift, and go to state 38
+    MUL        shift, and go to state 39
+    DIV        shift, and go to state 40
+    MOD        shift, and go to state 41
+    INC        shift, and go to state 42
+    DEC        shift, and go to state 43
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 44
+
+    $default  reduce using rule 26 (term)
+
+    expr   go to state 108
+    term   go to state 46
+    unary  go to state 47
+    val    go to state 48
+
+
+State 78
+
+   24 term: DIV val . expr
+
+    ADD        shift, and go to state 37
+    SUB        shift, and go to state 38
+    MUL        shift, and go to state 39
+    DIV        shift, and go to state 40
+    MOD        shift, and go to state 41
+    INC        shift, and go to state 42
+    DEC        shift, and go to state 43
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 44
+
+    $default  reduce using rule 26 (term)
+
+    expr   go to state 109
+    term   go to state 46
+    unary  go to state 47
+    val    go to state 48
+
+
+State 79
+
+   25 term: MOD val . expr
+
+    ADD        shift, and go to state 37
+    SUB        shift, and go to state 38
+    MUL        shift, and go to state 39
+    DIV        shift, and go to state 40
+    MOD        shift, and go to state 41
+    INC        shift, and go to state 42
+    DEC        shift, and go to state 43
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 44
+
+    $default  reduce using rule 26 (term)
+
+    expr   go to state 110
+    term   go to state 46
+    unary  go to state 47
+    val    go to state 48
+
+
+State 80
+
+   30 assignment: ID ASGN expression_stat .
+   43 condition: expression_stat . MT expression_stat
+   44          | expression_stat . LT expression_stat
+   45          | expression_stat . MTE expression_stat
+   46          | expression_stat . LTE expression_stat
+   47          | expression_stat . EQ expression_stat
+   48          | expression_stat . NE expression_stat
+
+    MT   shift, and go to state 58
+    LT   shift, and go to state 59
+    MTE  shift, and go to state 60
+    LTE  shift, and go to state 61
+    EQ   shift, and go to state 62
+    NE   shift, and go to state 63
+
+    MT        [reduce using rule 30 (assignment)]
+    LT        [reduce using rule 30 (assignment)]
+    MTE       [reduce using rule 30 (assignment)]
+    LTE       [reduce using rule 30 (assignment)]
+    EQ        [reduce using rule 30 (assignment)]
+    NE        [reduce using rule 30 (assignment)]
+    $default  reduce using rule 30 (assignment)
+
+
+State 81
+
+   31 assignment: ID ADDASGN expression_stat .
+   43 condition: expression_stat . MT expression_stat
+   44          | expression_stat . LT expression_stat
+   45          | expression_stat . MTE expression_stat
+   46          | expression_stat . LTE expression_stat
+   47          | expression_stat . EQ expression_stat
+   48          | expression_stat . NE expression_stat
+
+    MT   shift, and go to state 58
+    LT   shift, and go to state 59
+    MTE  shift, and go to state 60
+    LTE  shift, and go to state 61
+    EQ   shift, and go to state 62
+    NE   shift, and go to state 63
+
+    MT        [reduce using rule 31 (assignment)]
+    LT        [reduce using rule 31 (assignment)]
+    MTE       [reduce using rule 31 (assignment)]
+    LTE       [reduce using rule 31 (assignment)]
+    EQ        [reduce using rule 31 (assignment)]
+    NE        [reduce using rule 31 (assignment)]
+    $default  reduce using rule 31 (assignment)
+
+
+State 82
+
+   32 assignment: ID SUBASGN expression_stat .
+   43 condition: expression_stat . MT expression_stat
+   44          | expression_stat . LT expression_stat
+   45          | expression_stat . MTE expression_stat
+   46          | expression_stat . LTE expression_stat
+   47          | expression_stat . EQ expression_stat
+   48          | expression_stat . NE expression_stat
+
+    MT   shift, and go to state 58
+    LT   shift, and go to state 59
+    MTE  shift, and go to state 60
+    LTE  shift, and go to state 61
+    EQ   shift, and go to state 62
+    NE   shift, and go to state 63
+
+    MT        [reduce using rule 32 (assignment)]
+    LT        [reduce using rule 32 (assignment)]
+    MTE       [reduce using rule 32 (assignment)]
+    LTE       [reduce using rule 32 (assignment)]
+    EQ        [reduce using rule 32 (assignment)]
+    NE        [reduce using rule 32 (assignment)]
+    $default  reduce using rule 32 (assignment)
+
+
+State 83
+
+   33 assignment: ID MULASGN expression_stat .
+   43 condition: expression_stat . MT expression_stat
+   44          | expression_stat . LT expression_stat
+   45          | expression_stat . MTE expression_stat
+   46          | expression_stat . LTE expression_stat
+   47          | expression_stat . EQ expression_stat
+   48          | expression_stat . NE expression_stat
+
+    MT   shift, and go to state 58
+    LT   shift, and go to state 59
+    MTE  shift, and go to state 60
+    LTE  shift, and go to state 61
+    EQ   shift, and go to state 62
+    NE   shift, and go to state 63
+
+    MT        [reduce using rule 33 (assignment)]
+    LT        [reduce using rule 33 (assignment)]
+    MTE       [reduce using rule 33 (assignment)]
+    LTE       [reduce using rule 33 (assignment)]
+    EQ        [reduce using rule 33 (assignment)]
+    NE        [reduce using rule 33 (assignment)]
+    $default  reduce using rule 33 (assignment)
+
+
+State 84
+
+   34 assignment: ID DIVASGN expression_stat .
+   43 condition: expression_stat . MT expression_stat
+   44          | expression_stat . LT expression_stat
+   45          | expression_stat . MTE expression_stat
+   46          | expression_stat . LTE expression_stat
+   47          | expression_stat . EQ expression_stat
+   48          | expression_stat . NE expression_stat
+
+    MT   shift, and go to state 58
+    LT   shift, and go to state 59
+    MTE  shift, and go to state 60
+    LTE  shift, and go to state 61
+    EQ   shift, and go to state 62
+    NE   shift, and go to state 63
+
+    MT        [reduce using rule 34 (assignment)]
+    LT        [reduce using rule 34 (assignment)]
+    MTE       [reduce using rule 34 (assignment)]
+    LTE       [reduce using rule 34 (assignment)]
+    EQ        [reduce using rule 34 (assignment)]
+    NE        [reduce using rule 34 (assignment)]
+    $default  reduce using rule 34 (assignment)
+
+
+State 85
+
+   35 assignment: ID MODASGN expression_stat .
+   43 condition: expression_stat . MT expression_stat
+   44          | expression_stat . LT expression_stat
+   45          | expression_stat . MTE expression_stat
+   46          | expression_stat . LTE expression_stat
+   47          | expression_stat . EQ expression_stat
+   48          | expression_stat . NE expression_stat
+
+    MT   shift, and go to state 58
+    LT   shift, and go to state 59
+    MTE  shift, and go to state 60
+    LTE  shift, and go to state 61
+    EQ   shift, and go to state 62
+    NE   shift, and go to state 63
+
+    MT        [reduce using rule 35 (assignment)]
+    LT        [reduce using rule 35 (assignment)]
+    MTE       [reduce using rule 35 (assignment)]
+    LTE       [reduce using rule 35 (assignment)]
+    EQ        [reduce using rule 35 (assignment)]
+    NE        [reduce using rule 35 (assignment)]
+    $default  reduce using rule 35 (assignment)
+
+
+State 86
+
+   18 expression_stat: ID LB RB .
+
+    $default  reduce using rule 18 (expression_stat)
+
+
+State 87
+
+   17 expression_stat: ID . LB argument_list RB
+   18                | ID . LB RB
+   30 assignment: ID . ASGN expression_stat
+   31           | ID . ADDASGN expression_stat
+   32           | ID . SUBASGN expression_stat
+   33           | ID . MULASGN expression_stat
+   34           | ID . DIVASGN expression_stat
+   35           | ID . MODASGN expression_stat
+   66 argument: ID .
+   68 val: ID .
+
+    ASGN     shift, and go to state 49
+    ADDASGN  shift, and go to state 50
+    SUBASGN  shift, and go to state 51
+    MULASGN  shift, and go to state 52
+    DIVASGN  shift, and go to state 53
+    MODASGN  shift, and go to state 54
+    LB       shift, and go to state 55
+
+    RB        reduce using rule 66 (argument)
+    RB        [reduce using rule 68 (val)]
+    COMMA     reduce using rule 66 (argument)
+    COMMA     [reduce using rule 68 (val)]
+    $default  reduce using rule 68 (val)
+
+
+State 88
+
+   43 condition: expression_stat . MT expression_stat
+   44          | expression_stat . LT expression_stat
+   45          | expression_stat . MTE expression_stat
+   46          | expression_stat . LTE expression_stat
+   47          | expression_stat . EQ expression_stat
+   48          | expression_stat . NE expression_stat
+   67 argument: expression_stat .
+
+    MT   shift, and go to state 58
+    LT   shift, and go to state 59
+    MTE  shift, and go to state 60
+    LTE  shift, and go to state 61
+    EQ   shift, and go to state 62
+    NE   shift, and go to state 63
+
+    $default  reduce using rule 67 (argument)
+
+
+State 89
+
+   17 expression_stat: ID LB argument_list . RB
+   65 argument_list: argument_list . COMMA argument
+
+    RB     shift, and go to state 111
+    COMMA  shift, and go to state 112
+
+
+State 90
+
+   64 argument_list: argument .
+
+    $default  reduce using rule 64 (argument_list)
+
+
+State 91
+
+   43 condition: expression_stat . MT expression_stat
+   43          | expression_stat MT expression_stat .
+   44          | expression_stat . LT expression_stat
+   45          | expression_stat . MTE expression_stat
+   46          | expression_stat . LTE expression_stat
+   47          | expression_stat . EQ expression_stat
+   48          | expression_stat . NE expression_stat
+
+    MT   shift, and go to state 58
+    LT   shift, and go to state 59
+    MTE  shift, and go to state 60
+    LTE  shift, and go to state 61
+    EQ   shift, and go to state 62
+    NE   shift, and go to state 63
+
+    MT        [reduce using rule 43 (condition)]
+    LT        [reduce using rule 43 (condition)]
+    MTE       [reduce using rule 43 (condition)]
+    LTE       [reduce using rule 43 (condition)]
+    EQ        [reduce using rule 43 (condition)]
+    NE        [reduce using rule 43 (condition)]
+    $default  reduce using rule 43 (condition)
+
+
+State 92
+
+   43 condition: expression_stat . MT expression_stat
+   44          | expression_stat . LT expression_stat
+   44          | expression_stat LT expression_stat .
+   45          | expression_stat . MTE expression_stat
+   46          | expression_stat . LTE expression_stat
+   47          | expression_stat . EQ expression_stat
+   48          | expression_stat . NE expression_stat
+
+    MT   shift, and go to state 58
+    LT   shift, and go to state 59
+    MTE  shift, and go to state 60
+    LTE  shift, and go to state 61
+    EQ   shift, and go to state 62
+    NE   shift, and go to state 63
+
+    MT        [reduce using rule 44 (condition)]
+    LT        [reduce using rule 44 (condition)]
+    MTE       [reduce using rule 44 (condition)]
+    LTE       [reduce using rule 44 (condition)]
+    EQ        [reduce using rule 44 (condition)]
+    NE        [reduce using rule 44 (condition)]
+    $default  reduce using rule 44 (condition)
+
+
+State 93
+
+   43 condition: expression_stat . MT expression_stat
+   44          | expression_stat . LT expression_stat
+   45          | expression_stat . MTE expression_stat
+   45          | expression_stat MTE expression_stat .
+   46          | expression_stat . LTE expression_stat
+   47          | expression_stat . EQ expression_stat
+   48          | expression_stat . NE expression_stat
+
+    MT   shift, and go to state 58
+    LT   shift, and go to state 59
+    MTE  shift, and go to state 60
+    LTE  shift, and go to state 61
+    EQ   shift, and go to state 62
+    NE   shift, and go to state 63
+
+    MT        [reduce using rule 45 (condition)]
+    LT        [reduce using rule 45 (condition)]
+    MTE       [reduce using rule 45 (condition)]
+    LTE       [reduce using rule 45 (condition)]
+    EQ        [reduce using rule 45 (condition)]
+    NE        [reduce using rule 45 (condition)]
+    $default  reduce using rule 45 (condition)
+
+
+State 94
+
+   43 condition: expression_stat . MT expression_stat
+   44          | expression_stat . LT expression_stat
+   45          | expression_stat . MTE expression_stat
+   46          | expression_stat . LTE expression_stat
+   46          | expression_stat LTE expression_stat .
+   47          | expression_stat . EQ expression_stat
+   48          | expression_stat . NE expression_stat
+
+    MT   shift, and go to state 58
+    LT   shift, and go to state 59
+    MTE  shift, and go to state 60
+    LTE  shift, and go to state 61
+    EQ   shift, and go to state 62
+    NE   shift, and go to state 63
+
+    MT        [reduce using rule 46 (condition)]
+    LT        [reduce using rule 46 (condition)]
+    MTE       [reduce using rule 46 (condition)]
+    LTE       [reduce using rule 46 (condition)]
+    EQ        [reduce using rule 46 (condition)]
+    NE        [reduce using rule 46 (condition)]
+    $default  reduce using rule 46 (condition)
+
+
+State 95
+
+   43 condition: expression_stat . MT expression_stat
+   44          | expression_stat . LT expression_stat
+   45          | expression_stat . MTE expression_stat
+   46          | expression_stat . LTE expression_stat
+   47          | expression_stat . EQ expression_stat
+   47          | expression_stat EQ expression_stat .
+   48          | expression_stat . NE expression_stat
+
+    MT   shift, and go to state 58
+    LT   shift, and go to state 59
+    MTE  shift, and go to state 60
+    LTE  shift, and go to state 61
+    EQ   shift, and go to state 62
+    NE   shift, and go to state 63
+
+    MT        [reduce using rule 47 (condition)]
+    LT        [reduce using rule 47 (condition)]
+    MTE       [reduce using rule 47 (condition)]
+    LTE       [reduce using rule 47 (condition)]
+    EQ        [reduce using rule 47 (condition)]
+    NE        [reduce using rule 47 (condition)]
+    $default  reduce using rule 47 (condition)
+
+
+State 96
+
+   43 condition: expression_stat . MT expression_stat
+   44          | expression_stat . LT expression_stat
+   45          | expression_stat . MTE expression_stat
+   46          | expression_stat . LTE expression_stat
+   47          | expression_stat . EQ expression_stat
+   48          | expression_stat . NE expression_stat
+   48          | expression_stat NE expression_stat .
+
+    MT   shift, and go to state 58
+    LT   shift, and go to state 59
+    MTE  shift, and go to state 60
+    LTE  shift, and go to state 61
+    EQ   shift, and go to state 62
+    NE   shift, and go to state 63
+
+    MT        [reduce using rule 48 (condition)]
+    LT        [reduce using rule 48 (condition)]
+    MTE       [reduce using rule 48 (condition)]
+    LTE       [reduce using rule 48 (condition)]
+    EQ        [reduce using rule 48 (condition)]
+    NE        [reduce using rule 48 (condition)]
+    $default  reduce using rule 48 (condition)
+
+
+State 97
+
+   15 expression_stat: condition .
+   49 condition: condition . AND condition
+   49          | condition AND condition .
+   50          | condition . OR condition
+
+    AND  shift, and go to state 64
+    OR   shift, and go to state 65
+
+    SEMICOLON  reduce using rule 49 (condition)
+    MT         reduce using rule 15 (expression_stat)
+    MT         [reduce using rule 49 (condition)]
+    LT         reduce using rule 15 (expression_stat)
+    LT         [reduce using rule 49 (condition)]
+    MTE        reduce using rule 15 (expression_stat)
+    MTE        [reduce using rule 49 (condition)]
+    LTE        reduce using rule 15 (expression_stat)
+    LTE        [reduce using rule 49 (condition)]
+    EQ         reduce using rule 15 (expression_stat)
+    EQ         [reduce using rule 49 (condition)]
+    NE         reduce using rule 15 (expression_stat)
+    NE         [reduce using rule 49 (condition)]
+    AND        [reduce using rule 49 (condition)]
+    OR         [reduce using rule 49 (condition)]
+    RB         reduce using rule 49 (condition)
+    COMMA      reduce using rule 49 (condition)
+    $default   reduce using rule 15 (expression_stat)
+
+
+State 98
+
+   15 expression_stat: condition .
+   49 condition: condition . AND condition
+   50          | condition . OR condition
+   50          | condition OR condition .
+
+    AND  shift, and go to state 64
+    OR   shift, and go to state 65
+
+    SEMICOLON  reduce using rule 50 (condition)
+    MT         reduce using rule 15 (expression_stat)
+    MT         [reduce using rule 50 (condition)]
+    LT         reduce using rule 15 (expression_stat)
+    LT         [reduce using rule 50 (condition)]
+    MTE        reduce using rule 15 (expression_stat)
+    MTE        [reduce using rule 50 (condition)]
+    LTE        reduce using rule 15 (expression_stat)
+    LTE        [reduce using rule 50 (condition)]
+    EQ         reduce using rule 15 (expression_stat)
+    EQ         [reduce using rule 50 (condition)]
+    NE         reduce using rule 15 (expression_stat)
+    NE         [reduce using rule 50 (condition)]
+    AND        [reduce using rule 50 (condition)]
+    OR         [reduce using rule 50 (condition)]
+    RB         reduce using rule 50 (condition)
+    COMMA      reduce using rule 50 (condition)
+    $default   reduce using rule 15 (expression_stat)
+
+
+State 99
+
+    9 declaration: type ID ASGN . initializer
+
+    NOT        shift, and go to state 6
+    TRUE       shift, and go to state 113
+    FALSE      shift, and go to state 114
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 115
+    F_CONST    shift, and go to state 116
+    STR_CONST  shift, and go to state 117
+    ID         shift, and go to state 118
+
+    expression_stat  go to state 119
+    assignment       go to state 25
+    condition        go to state 27
+    initializer      go to state 120
+    val              go to state 29
+
+
+State 100
+
+   11 declaration: type ID LB . parameter_list RB
+   12            | type ID LB . RB
+   40 compound_stat: type ID LB . parameter_list RB LCB
+   41              | type ID LB . RB LCB
+
+    RB      shift, and go to state 121
+    INT     shift, and go to state 17
+    FLOAT   shift, and go to state 18
+    BOOL    shift, and go to state 19
+    STRING  shift, and go to state 20
+    VOID    shift, and go to state 21
+
+    parameter_list  go to state 122
+    parameter       go to state 123
+    type            go to state 124
+
+
+State 101
+
+   52 print_func: PRINT LB STR_CONST RB .
+
+    $default  reduce using rule 52 (print_func)
+
+
+State 102
+
+   53 print_func: PRINT LB ID RB .
+
+    $default  reduce using rule 53 (print_func)
+
+
+State 103
+
+   36 compound_stat: IF LB expression_stat RB . LCB
+
+    LCB  shift, and go to state 125
+
+
+State 104
+
+   39 compound_stat: WHILE LB expression_stat RB . LCB
+
+    LCB  shift, and go to state 126
+
+
+State 105
+
+   37 compound_stat: RCB ELSE IF LB . expression_stat RB LCB
+
+    NOT        shift, and go to state 6
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 16
+
+    expression_stat  go to state 127
+    assignment       go to state 25
+    condition        go to state 27
+    val              go to state 29
+
+
+State 106
+
+   19 expr: ADD val expr .
+
+    $default  reduce using rule 19 (expr)
+
+
+State 107
+
+   20 expr: SUB val expr .
+
+    $default  reduce using rule 20 (expr)
+
+
+State 108
+
+   23 term: MUL val expr .
+
+    $default  reduce using rule 23 (term)
+
+
+State 109
+
+   24 term: DIV val expr .
+
+    $default  reduce using rule 24 (term)
+
+
+State 110
+
+   25 term: MOD val expr .
+
+    $default  reduce using rule 25 (term)
+
+
+State 111
+
+   17 expression_stat: ID LB argument_list RB .
+
+    $default  reduce using rule 17 (expression_stat)
+
+
+State 112
+
+   65 argument_list: argument_list COMMA . argument
+
+    NOT        shift, and go to state 6
+    TRUE       shift, and go to state 8
+    FALSE      shift, and go to state 9
+    RET        shift, and go to state 12
+    I_CONST    shift, and go to state 13
+    F_CONST    shift, and go to state 14
+    STR_CONST  shift, and go to state 15
+    ID         shift, and go to state 87
+
+    expression_stat  go to state 88
+    assignment       go to state 25
+    condition        go to state 27
+    argument         go to state 128
+    val              go to state 29
+
+
+State 113
+
+   56 initializer: TRUE .
+   72 val: TRUE .
+
+    SEMICOLON  reduce using rule 56 (initializer)
+    SEMICOLON  [reduce using rule 72 (val)]
+    $default   reduce using rule 72 (val)
+
+
+State 114
+
+   57 initializer: FALSE .
+   73 val: FALSE .
+
+    SEMICOLON  reduce using rule 57 (initializer)
+    SEMICOLON  [reduce using rule 73 (val)]
+    $default   reduce using rule 73 (val)
+
+
+State 115
+
+   54 initializer: I_CONST .
+   69 val: I_CONST .
+
+    SEMICOLON  reduce using rule 54 (initializer)
+    SEMICOLON  [reduce using rule 69 (val)]
+    $default   reduce using rule 69 (val)
+
+
+State 116
+
+   55 initializer: F_CONST .
+   70 val: F_CONST .
+
+    SEMICOLON  reduce using rule 55 (initializer)
+    SEMICOLON  [reduce using rule 70 (val)]
+    $default   reduce using rule 70 (val)
+
+
+State 117
+
+   59 initializer: STR_CONST .
+   71 val: STR_CONST .
+
+    SEMICOLON  reduce using rule 59 (initializer)
+    SEMICOLON  [reduce using rule 71 (val)]
+    $default   reduce using rule 71 (val)
+
+
+State 118
+
+   17 expression_stat: ID . LB argument_list RB
+   18                | ID . LB RB
+   30 assignment: ID . ASGN expression_stat
+   31           | ID . ADDASGN expression_stat
+   32           | ID . SUBASGN expression_stat
+   33           | ID . MULASGN expression_stat
+   34           | ID . DIVASGN expression_stat
+   35           | ID . MODASGN expression_stat
+   58 initializer: ID .
+   68 val: ID .
+
+    ASGN     shift, and go to state 49
+    ADDASGN  shift, and go to state 50
+    SUBASGN  shift, and go to state 51
+    MULASGN  shift, and go to state 52
+    DIVASGN  shift, and go to state 53
+    MODASGN  shift, and go to state 54
+    LB       shift, and go to state 55
+
+    SEMICOLON  reduce using rule 58 (initializer)
+    SEMICOLON  [reduce using rule 68 (val)]
+    $default   reduce using rule 68 (val)
+
+
+State 119
+
+   43 condition: expression_stat . MT expression_stat
+   44          | expression_stat . LT expression_stat
+   45          | expression_stat . MTE expression_stat
+   46          | expression_stat . LTE expression_stat
+   47          | expression_stat . EQ expression_stat
+   48          | expression_stat . NE expression_stat
+   60 initializer: expression_stat .
+
+    MT   shift, and go to state 58
+    LT   shift, and go to state 59
+    MTE  shift, and go to state 60
+    LTE  shift, and go to state 61
+    EQ   shift, and go to state 62
+    NE   shift, and go to state 63
+
+    $default  reduce using rule 60 (initializer)
+
+
+State 120
+
+    9 declaration: type ID ASGN initializer .
+
+    $default  reduce using rule 9 (declaration)
+
+
+State 121
+
+   12 declaration: type ID LB RB .
+   41 compound_stat: type ID LB RB . LCB
+
+    LCB  shift, and go to state 129
+
+    $default  reduce using rule 12 (declaration)
+
+
+State 122
+
+   11 declaration: type ID LB parameter_list . RB
+   40 compound_stat: type ID LB parameter_list . RB LCB
+   62 parameter_list: parameter_list . COMMA parameter
+
+    RB     shift, and go to state 130
+    COMMA  shift, and go to state 131
+
+
+State 123
+
+   61 parameter_list: parameter .
+
+    $default  reduce using rule 61 (parameter_list)
+
+
+State 124
+
+   63 parameter: type . ID
+
+    ID  shift, and go to state 132
+
+
+State 125
+
+   36 compound_stat: IF LB expression_stat RB LCB .
+
+    $default  reduce using rule 36 (compound_stat)
+
+
+State 126
+
+   39 compound_stat: WHILE LB expression_stat RB LCB .
+
+    $default  reduce using rule 39 (compound_stat)
+
+
+State 127
+
+   37 compound_stat: RCB ELSE IF LB expression_stat . RB LCB
+   43 condition: expression_stat . MT expression_stat
+   44          | expression_stat . LT expression_stat
+   45          | expression_stat . MTE expression_stat
+   46          | expression_stat . LTE expression_stat
+   47          | expression_stat . EQ expression_stat
+   48          | expression_stat . NE expression_stat
+
+    MT   shift, and go to state 58
+    LT   shift, and go to state 59
+    MTE  shift, and go to state 60
+    LTE  shift, and go to state 61
+    EQ   shift, and go to state 62
+    NE   shift, and go to state 63
+    RB   shift, and go to state 133
+
+
+State 128
+
+   65 argument_list: argument_list COMMA argument .
+
+    $default  reduce using rule 65 (argument_list)
+
+
+State 129
+
+   41 compound_stat: type ID LB RB LCB .
+
+    $default  reduce using rule 41 (compound_stat)
+
+
+State 130
+
+   11 declaration: type ID LB parameter_list RB .
+   40 compound_stat: type ID LB parameter_list RB . LCB
+
+    LCB  shift, and go to state 134
+
+    $default  reduce using rule 11 (declaration)
+
+
+State 131
+
+   62 parameter_list: parameter_list COMMA . parameter
+
+    INT     shift, and go to state 17
+    FLOAT   shift, and go to state 18
+    BOOL    shift, and go to state 19
+    STRING  shift, and go to state 20
+    VOID    shift, and go to state 21
+
+    parameter  go to state 135
+    type       go to state 124
+
+
+State 132
+
+   63 parameter: type ID .
+
+    $default  reduce using rule 63 (parameter)
+
+
+State 133
+
+   37 compound_stat: RCB ELSE IF LB expression_stat RB . LCB
+
+    LCB  shift, and go to state 136
+
+
+State 134
+
+   40 compound_stat: type ID LB parameter_list RB LCB .
+
+    $default  reduce using rule 40 (compound_stat)
+
+
+State 135
+
+   62 parameter_list: parameter_list COMMA parameter .
+
+    $default  reduce using rule 62 (parameter_list)
+
+
+State 136
+
+   37 compound_stat: RCB ELSE IF LB expression_stat RB LCB .
+
+    $default  reduce using rule 37 (compound_stat)
