@@ -1,4 +1,4 @@
-void func();
+void func(float c, string d);
 
 int main(){
 	float a = 3.5;
@@ -6,7 +6,7 @@ int main(){
 	return 0;
 }
 
-void func(){
+void func(float c, string d){
 	int a;
 	bool b;
 }

@@ -8,16 +8,17 @@ extern int yylex();
 extern char* yytext;   // Get current token from lex
 extern char buf[256];  // Get current code line from lex
 int scope = 0;
-int symbol_num = -1;
-int err_flag = 0;
+int symbol_num = 0;
+int err_flag = 0;	// 0: No error;  1: syntatic error;  2: semantic error
 char err_type[20];
 char err_symbol[256];
 char params[256];
 int dump = 0;
-int func_def = 0;
+int param_index[30];
+int param_num = 0;
 
 /* Symbol table function - you can add new function if needed. */
-int lookup_symbol(char *name, int symbol_num);
+int lookup_symbol(char *name, int scope_level, int symbol_num);
 void create_symbol(int entry_num);
 void insert_symbol(int index, char *name, char *entry_type, char *data_type, int scope_level, char *param, int forward);
 void dump_symbol();
@@ -112,10 +113,10 @@ stat
 declaration
     : type ID ASGN initializer
 		{			
-			if(lookup_symbol($2, symbol_num) == -1)
+			if(lookup_symbol($2, scope, symbol_num) == -1)
 			{
-				symbol_num++;
 				insert_symbol(symbol_num, $2, "variable", $1, scope, NULL,0);
+				symbol_num++;
 			}
 			else
 			{
@@ -124,10 +125,10 @@ declaration
 		}
     | type ID
 		{			
-			if(lookup_symbol($2, symbol_num) == -1)
+			if(lookup_symbol($2, scope, symbol_num) == -1)
 			{
-				symbol_num++;
 				insert_symbol(symbol_num, $2, "variable", $1, scope, NULL,0);
+				symbol_num++;
 			}
 			else
 			{
@@ -136,22 +137,37 @@ declaration
 		}
 	| type ID LB parameter_list RB
 		{			
-			if(lookup_symbol($2, symbol_num) == -1)
+			if(lookup_symbol($2, scope, symbol_num) == -1)
 			{
-				symbol_num++;
 				insert_symbol(symbol_num, $2, "function", $1, scope, NULL,1);
+				symbol_num++;
 			}
 			else
 			{
 				set_err(2,"Redeclared function",$2);
 			}
+
+			int i,j;
+			for(i=0; i<param_num; i++)
+			{
+				for(j=0; j<=symbol_num; j++)
+				{
+					if(table[j]->index == param_index[i])
+					{	
+						memset(table[i], 0, sizeof(struct symbol));
+						table[i]->scope_level = -1;
+						break;
+					}
+				}
+			}
+			symbol_num -= param_num;
 		}
 	| type ID LB RB
 		{			
-			if(lookup_symbol($2, symbol_num) == -1)
+			if(lookup_symbol($2, scope, symbol_num) == -1)
 			{
-				symbol_num++;
 				insert_symbol(symbol_num, $2, "function", $1, scope, NULL,1);
+				symbol_num++;
 			}
 			else
 			{
@@ -168,7 +184,7 @@ expression_stat
 	| RET expr
 	| ID LB argument_list RB
 		{
-			if(lookup_symbol($1, symbol_num) == -1)
+			if(lookup_symbol($1, scope, symbol_num) == -1)
 			{	
 				set_err(2,"Undeclared function",$1);
 			}
@@ -219,13 +235,13 @@ compound_stat
 		}
 	| type ID LB parameter_list RB LCB
 		{
-			int lookup_result = lookup_symbol($2, symbol_num);
+			int lookup_result = lookup_symbol($2, scope, symbol_num);
 			if(lookup_result == -1)
 			{
-				symbol_num++;
 				char temp[256];
 				strncpy(temp,params,strlen(params)-2);
 				insert_symbol(symbol_num, $2, "function", $1, scope, temp,0);
+				symbol_num++;
 				memset(params,0,sizeof(params));
 
 			}
@@ -245,11 +261,11 @@ compound_stat
 	}
 	| type ID LB RB LCB
 		{
-			int lookup_result = lookup_symbol($2, symbol_num); 
+			int lookup_result = lookup_symbol($2, scope, symbol_num); 
 			if(lookup_result == -1)
 			{
-				symbol_num++;
 				insert_symbol(symbol_num, $2, "function", $1, scope, NULL,0);
+				symbol_num++;
 			}
 			else if(lookup_result == -2)
 			{
@@ -281,7 +297,7 @@ print_func
 	: PRINT LB STR_CONST RB
 	| PRINT LB ID RB
 		{
-			if(lookup_symbol($3, symbol_num) == -1)
+			if(lookup_symbol($3, scope, symbol_num) == -1)
 			{
 				set_err(2,"Undeclared variable",$3);
 			}
@@ -295,6 +311,12 @@ initializer
 	| TRUE
 	| FALSE
 	| ID
+		{
+			if(lookup_symbol($1, scope, symbol_num) == -1)
+			{
+				set_err(2,"Undeclared variable",$1);
+			}
+		}
 	| STR_CONST
 	| expression_stat
 ;
@@ -307,12 +329,15 @@ parameter_list
 parameter
 	: type ID
 		{
-			if(lookup_symbol($2, symbol_num) == -1)
+			if(lookup_symbol($2, scope+1, symbol_num) == -1)
 			{
-				symbol_num++;
 				insert_symbol(symbol_num, $2, "parameter", $1, scope+1, NULL,0);
+				symbol_num++;
 				strcat(params,$1);
 				strcat(params,", ");
+
+				param_index[param_num] = symbol_num;
+				param_num++;
 			}
 			else
 			{
@@ -329,13 +354,20 @@ argument_list
 
 argument
 	: ID
+		{
+			if(lookup_symbol($1, scope, symbol_num) == -1)
+			{
+				set_err(2,"Undeclared variable",$1);
+			}
+		}
+
 	| expression_stat
 ;
 
 val
 	: ID
 		{
-			if(lookup_symbol($1, symbol_num) == -1)
+			if(lookup_symbol($1, scope, symbol_num) == -1)
 			{
 				set_err(2,"Undeclared variable",$1);
 			}
@@ -427,27 +459,28 @@ void insert_symbol(int index, char *name, char *entry_type, char *data_type, int
 	table[index]->forward = forward;
 }
 
-int lookup_symbol(char *name, int symbol_num)
+/* Return -1 if the symbol with same name and same scope doesn't exist, so can be inserted;
+	return -2 if the symbol with same name and same scope exists, so can't be redeclared;
+	return -3 if the symbol with same name exists, and it is in seeable scope;
+	return entry number if the symbol is a function and it has been forward declared
+*/	
+int lookup_symbol(char *name, int scope_level, int symbol_num)
 {
 	int i = 0;
-	int result = -1;
-	if(symbol_num < 0)
+	for(i=0; i<symbol_num; i++)
 	{
-		return -1;
-	}
-	for(i=0; i<=symbol_num; i++)
-	{
-		if(strcmp(name, table[i]->name)==0)
+		if(strcmp(name, table[i]->name)==0 && table[i]->scope_level==scope_level)
 		{
 			if(table[i]->forward==1)
 				return i;
 			else
 				return -2;
-			break;
 		}
+		else if(strcmp(name, table[i]->name)==0 && table[i]->scope_level<scope_level)
+			return -3;
 	}
 
-	return result;
+	return -1;
 }
 
 void dump_symbol(int symbol_num, int scope) 
@@ -466,13 +499,14 @@ void dump_symbol(int symbol_num, int scope)
 	{
 		printf("\n%-10s%-10s%-12s%-10s%-10s%-10s\n\n",
            		"Index", "Name", "Kind", "Type", "Scope", "Attribute");
-		for(i=0,j=0; i<=symbol_num; i++)
+		for(i=0,j=0; i<symbol_num; i++)
 		{
 			if(table[i]->scope_level==scope)
 			{
 				printf("%-10d%-10s%-12s%-10s%-10d", j, table[i]->name, table[i]->entry_type, table[i]->data_type, table[i]->scope_level);
 				printf("%-s\n",table[i]->param);
 				j++;
+				memset(table[i],0,sizeof(struct symbol));
 				table[i]->scope_level = -1;
 			}
 		}

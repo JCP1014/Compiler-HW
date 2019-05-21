@@ -72,16 +72,17 @@ extern int yylex();
 extern char* yytext;   // Get current token from lex
 extern char buf[256];  // Get current code line from lex
 int scope = 0;
-int symbol_num = -1;
-int err_flag = 0;
+int symbol_num = 0;
+int err_flag = 0;	// 0: No error;  1: syntatic error;  2: semantic error
 char err_type[20];
 char err_symbol[256];
 char params[256];
 int dump = 0;
-int func_def = 0;
+int param_index[30];
+int param_num = 0;
 
 /* Symbol table function - you can add new function if needed. */
-int lookup_symbol(char *name, int symbol_num);
+int lookup_symbol(char *name, int scope_level, int symbol_num);
 void create_symbol(int entry_num);
 void insert_symbol(int index, char *name, char *entry_type, char *data_type, int scope_level, char *param, int forward);
 void dump_symbol();
@@ -101,7 +102,7 @@ struct symbol
 }**table;
 
 
-#line 105 "y.tab.c" /* yacc.c:339  */
+#line 106 "y.tab.c" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -249,13 +250,13 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 44 "compiler_hw2.y" /* yacc.c:355  */
+#line 45 "compiler_hw2.y" /* yacc.c:355  */
 
     int i_val;
     double f_val;
     char string[256];
 
-#line 259 "y.tab.c" /* yacc.c:355  */
+#line 260 "y.tab.c" /* yacc.c:355  */
 };
 
 typedef union YYSTYPE YYSTYPE;
@@ -272,7 +273,7 @@ int yyparse (void);
 
 /* Copy the second part of user declarations.  */
 
-#line 276 "y.tab.c" /* yacc.c:358  */
+#line 277 "y.tab.c" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -574,14 +575,14 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,    81,    81,    82,    86,    87,    88,    89,    90,    91,
-     113,   125,   137,   149,   165,   166,   167,   168,   169,   177,
-     181,   182,   183,   187,   188,   189,   190,   191,   195,   196,
-     197,   201,   202,   203,   204,   205,   206,   210,   214,   215,
-     216,   220,   246,   261,   269,   270,   271,   272,   273,   274,
-     275,   276,   277,   281,   282,   293,   294,   295,   296,   297,
-     298,   299,   303,   304,   308,   326,   327,   331,   332,   336,
-     343,   344,   345,   346,   347,   353,   354,   355,   356,   357
+       0,    82,    82,    83,    87,    88,    89,    90,    91,    92,
+     114,   126,   138,   165,   181,   182,   183,   184,   185,   193,
+     197,   198,   199,   203,   204,   205,   206,   207,   211,   212,
+     213,   217,   218,   219,   220,   221,   222,   226,   230,   231,
+     232,   236,   262,   277,   285,   286,   287,   288,   289,   290,
+     291,   292,   293,   297,   298,   309,   310,   311,   312,   313,
+     320,   321,   325,   326,   330,   351,   352,   356,   364,   368,
+     375,   376,   377,   378,   379,   385,   386,   387,   388,   389
 };
 #endif
 
@@ -1472,7 +1473,7 @@ yyreduce:
   switch (yyn)
     {
         case 9:
-#line 92 "compiler_hw2.y" /* yacc.c:1646  */
+#line 93 "compiler_hw2.y" /* yacc.c:1646  */
     { 
 			if(strlen(buf) < 1)
 				printf("%d:\n",yylineno);
@@ -1490,111 +1491,126 @@ yyreduce:
 			}
 			memset(buf, 0, sizeof(buf));
 		}
-#line 1494 "y.tab.c" /* yacc.c:1646  */
+#line 1495 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 10:
-#line 114 "compiler_hw2.y" /* yacc.c:1646  */
+#line 115 "compiler_hw2.y" /* yacc.c:1646  */
     {			
-			if(lookup_symbol((yyvsp[-2].string), symbol_num) == -1)
+			if(lookup_symbol((yyvsp[-2].string), scope, symbol_num) == -1)
 			{
-				symbol_num++;
 				insert_symbol(symbol_num, (yyvsp[-2].string), "variable", (yyvsp[-3].string), scope, NULL,0);
+				symbol_num++;
 			}
 			else
 			{
 				set_err(2,"Redeclared variable",(yyvsp[-2].string));
 			}
 		}
-#line 1510 "y.tab.c" /* yacc.c:1646  */
+#line 1511 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 11:
-#line 126 "compiler_hw2.y" /* yacc.c:1646  */
+#line 127 "compiler_hw2.y" /* yacc.c:1646  */
     {			
-			if(lookup_symbol((yyvsp[0].string), symbol_num) == -1)
+			if(lookup_symbol((yyvsp[0].string), scope, symbol_num) == -1)
 			{
-				symbol_num++;
 				insert_symbol(symbol_num, (yyvsp[0].string), "variable", (yyvsp[-1].string), scope, NULL,0);
+				symbol_num++;
 			}
 			else
 			{
 				set_err(2,"Redeclared variable",(yyvsp[0].string));
 			}
 		}
-#line 1526 "y.tab.c" /* yacc.c:1646  */
+#line 1527 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 12:
-#line 138 "compiler_hw2.y" /* yacc.c:1646  */
+#line 139 "compiler_hw2.y" /* yacc.c:1646  */
     {			
-			if(lookup_symbol((yyvsp[-3].string), symbol_num) == -1)
+			if(lookup_symbol((yyvsp[-3].string), scope, symbol_num) == -1)
 			{
-				symbol_num++;
 				insert_symbol(symbol_num, (yyvsp[-3].string), "function", (yyvsp[-4].string), scope, NULL,1);
+				symbol_num++;
 			}
 			else
 			{
 				set_err(2,"Redeclared function",(yyvsp[-3].string));
 			}
+
+			int i,j;
+			for(i=0; i<param_num; i++)
+			{
+				for(j=0; j<=symbol_num; j++)
+				{
+					if(table[j]->index == param_index[i])
+					{	
+						memset(table[i], 0, sizeof(struct symbol));
+						table[i]->scope_level = -1;
+						break;
+					}
+				}
+			}
+			symbol_num -= param_num;
 		}
-#line 1542 "y.tab.c" /* yacc.c:1646  */
+#line 1558 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 13:
-#line 150 "compiler_hw2.y" /* yacc.c:1646  */
+#line 166 "compiler_hw2.y" /* yacc.c:1646  */
     {			
-			if(lookup_symbol((yyvsp[-2].string), symbol_num) == -1)
+			if(lookup_symbol((yyvsp[-2].string), scope, symbol_num) == -1)
 			{
-				symbol_num++;
 				insert_symbol(symbol_num, (yyvsp[-2].string), "function", (yyvsp[-3].string), scope, NULL,1);
+				symbol_num++;
 			}
 			else
 			{
 				set_err(2,"Redeclared function",(yyvsp[-2].string));
 			}
 		}
-#line 1558 "y.tab.c" /* yacc.c:1646  */
+#line 1574 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 18:
-#line 170 "compiler_hw2.y" /* yacc.c:1646  */
+#line 186 "compiler_hw2.y" /* yacc.c:1646  */
     {
-			if(lookup_symbol((yyvsp[-3].string), symbol_num) == -1)
+			if(lookup_symbol((yyvsp[-3].string), scope, symbol_num) == -1)
 			{	
 				set_err(2,"Undeclared function",(yyvsp[-3].string));
 			}
 
 		}
-#line 1570 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 37:
-#line 211 "compiler_hw2.y" /* yacc.c:1646  */
-    {
-			scope++;
-		}
-#line 1578 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 40:
-#line 217 "compiler_hw2.y" /* yacc.c:1646  */
-    {
-			scope++;
-		}
 #line 1586 "y.tab.c" /* yacc.c:1646  */
     break;
 
-  case 41:
-#line 221 "compiler_hw2.y" /* yacc.c:1646  */
+  case 37:
+#line 227 "compiler_hw2.y" /* yacc.c:1646  */
     {
-			int lookup_result = lookup_symbol((yyvsp[-4].string), symbol_num);
+			scope++;
+		}
+#line 1594 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 40:
+#line 233 "compiler_hw2.y" /* yacc.c:1646  */
+    {
+			scope++;
+		}
+#line 1602 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 41:
+#line 237 "compiler_hw2.y" /* yacc.c:1646  */
+    {
+			int lookup_result = lookup_symbol((yyvsp[-4].string), scope, symbol_num);
 			if(lookup_result == -1)
 			{
-				symbol_num++;
 				char temp[256];
 				strncpy(temp,params,strlen(params)-2);
 				insert_symbol(symbol_num, (yyvsp[-4].string), "function", (yyvsp[-5].string), scope, temp,0);
+				symbol_num++;
 				memset(params,0,sizeof(params));
 
 			}
@@ -1612,17 +1628,17 @@ yyreduce:
 	
 			scope++;
 	}
-#line 1616 "y.tab.c" /* yacc.c:1646  */
+#line 1632 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 42:
-#line 247 "compiler_hw2.y" /* yacc.c:1646  */
+#line 263 "compiler_hw2.y" /* yacc.c:1646  */
     {
-			int lookup_result = lookup_symbol((yyvsp[-3].string), symbol_num); 
+			int lookup_result = lookup_symbol((yyvsp[-3].string), scope, symbol_num); 
 			if(lookup_result == -1)
 			{
-				symbol_num++;
 				insert_symbol(symbol_num, (yyvsp[-3].string), "function", (yyvsp[-4].string), scope, NULL,0);
+				symbol_num++;
 			}
 			else if(lookup_result == -2)
 			{
@@ -1631,37 +1647,51 @@ yyreduce:
 
 			scope++;
 		}
-#line 1635 "y.tab.c" /* yacc.c:1646  */
+#line 1651 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 43:
-#line 262 "compiler_hw2.y" /* yacc.c:1646  */
+#line 278 "compiler_hw2.y" /* yacc.c:1646  */
     {	
 			dump = 1;
 		}
-#line 1643 "y.tab.c" /* yacc.c:1646  */
+#line 1659 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 54:
-#line 283 "compiler_hw2.y" /* yacc.c:1646  */
+#line 299 "compiler_hw2.y" /* yacc.c:1646  */
     {
-			if(lookup_symbol((yyvsp[-1].string), symbol_num) == -1)
+			if(lookup_symbol((yyvsp[-1].string), scope, symbol_num) == -1)
 			{
 				set_err(2,"Undeclared variable",(yyvsp[-1].string));
 			}
 		}
-#line 1654 "y.tab.c" /* yacc.c:1646  */
+#line 1670 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 59:
+#line 314 "compiler_hw2.y" /* yacc.c:1646  */
+    {
+			if(lookup_symbol((yyvsp[0].string), scope, symbol_num) == -1)
+			{
+				set_err(2,"Undeclared variable",(yyvsp[0].string));
+			}
+		}
+#line 1681 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 64:
-#line 309 "compiler_hw2.y" /* yacc.c:1646  */
+#line 331 "compiler_hw2.y" /* yacc.c:1646  */
     {
-			if(lookup_symbol((yyvsp[0].string), symbol_num) == -1)
+			if(lookup_symbol((yyvsp[0].string), scope+1, symbol_num) == -1)
 			{
-				symbol_num++;
 				insert_symbol(symbol_num, (yyvsp[0].string), "parameter", (yyvsp[-1].string), scope+1, NULL,0);
+				symbol_num++;
 				strcat(params,(yyvsp[-1].string));
 				strcat(params,", ");
+
+				param_index[param_num] = symbol_num;
+				param_num++;
 			}
 			else
 			{
@@ -1669,52 +1699,63 @@ yyreduce:
 			}
 
 		}
-#line 1673 "y.tab.c" /* yacc.c:1646  */
+#line 1703 "y.tab.c" /* yacc.c:1646  */
     break;
 
-  case 69:
-#line 337 "compiler_hw2.y" /* yacc.c:1646  */
+  case 67:
+#line 357 "compiler_hw2.y" /* yacc.c:1646  */
     {
-			if(lookup_symbol((yyvsp[0].string), symbol_num) == -1)
+			if(lookup_symbol((yyvsp[0].string), scope, symbol_num) == -1)
 			{
 				set_err(2,"Undeclared variable",(yyvsp[0].string));
 			}
 		}
-#line 1684 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 75:
-#line 353 "compiler_hw2.y" /* yacc.c:1646  */
-    { strcpy((yyval.string), "int"); }
-#line 1690 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 76:
-#line 354 "compiler_hw2.y" /* yacc.c:1646  */
-    { strcpy((yyval.string), "float"); }
-#line 1696 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 77:
-#line 355 "compiler_hw2.y" /* yacc.c:1646  */
-    { strcpy((yyval.string), "bool"); }
-#line 1702 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 78:
-#line 356 "compiler_hw2.y" /* yacc.c:1646  */
-    { strcpy((yyval.string), "string"); }
-#line 1708 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 79:
-#line 357 "compiler_hw2.y" /* yacc.c:1646  */
-    { strcpy((yyval.string), "void"); }
 #line 1714 "y.tab.c" /* yacc.c:1646  */
     break;
 
+  case 69:
+#line 369 "compiler_hw2.y" /* yacc.c:1646  */
+    {
+			if(lookup_symbol((yyvsp[0].string), scope, symbol_num) == -1)
+			{
+				set_err(2,"Undeclared variable",(yyvsp[0].string));
+			}
+		}
+#line 1725 "y.tab.c" /* yacc.c:1646  */
+    break;
 
-#line 1718 "y.tab.c" /* yacc.c:1646  */
+  case 75:
+#line 385 "compiler_hw2.y" /* yacc.c:1646  */
+    { strcpy((yyval.string), "int"); }
+#line 1731 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 76:
+#line 386 "compiler_hw2.y" /* yacc.c:1646  */
+    { strcpy((yyval.string), "float"); }
+#line 1737 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 77:
+#line 387 "compiler_hw2.y" /* yacc.c:1646  */
+    { strcpy((yyval.string), "bool"); }
+#line 1743 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 78:
+#line 388 "compiler_hw2.y" /* yacc.c:1646  */
+    { strcpy((yyval.string), "string"); }
+#line 1749 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 79:
+#line 389 "compiler_hw2.y" /* yacc.c:1646  */
+    { strcpy((yyval.string), "void"); }
+#line 1755 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+
+#line 1759 "y.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -1942,7 +1983,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 360 "compiler_hw2.y" /* yacc.c:1906  */
+#line 392 "compiler_hw2.y" /* yacc.c:1906  */
 
 
 /* C code section */
@@ -2013,27 +2054,28 @@ void insert_symbol(int index, char *name, char *entry_type, char *data_type, int
 	table[index]->forward = forward;
 }
 
-int lookup_symbol(char *name, int symbol_num)
+/* Return -1 if the symbol with same name and same scope doesn't exist, so can be inserted;
+	return -2 if the symbol with same name and same scope exists, so can't be redeclared;
+	return -3 if the symbol with same name exists, and it is in seeable scope;
+	return entry number if the symbol is a function and it has been forward declared
+*/	
+int lookup_symbol(char *name, int scope_level, int symbol_num)
 {
 	int i = 0;
-	int result = -1;
-	if(symbol_num < 0)
+	for(i=0; i<symbol_num; i++)
 	{
-		return -1;
-	}
-	for(i=0; i<=symbol_num; i++)
-	{
-		if(strcmp(name, table[i]->name)==0)
+		if(strcmp(name, table[i]->name)==0 && table[i]->scope_level==scope_level)
 		{
 			if(table[i]->forward==1)
 				return i;
 			else
 				return -2;
-			break;
 		}
+		else if(strcmp(name, table[i]->name)==0 && table[i]->scope_level<scope_level)
+			return -3;
 	}
 
-	return result;
+	return -1;
 }
 
 void dump_symbol(int symbol_num, int scope) 
@@ -2052,13 +2094,14 @@ void dump_symbol(int symbol_num, int scope)
 	{
 		printf("\n%-10s%-10s%-12s%-10s%-10s%-10s\n\n",
            		"Index", "Name", "Kind", "Type", "Scope", "Attribute");
-		for(i=0,j=0; i<=symbol_num; i++)
+		for(i=0,j=0; i<symbol_num; i++)
 		{
 			if(table[i]->scope_level==scope)
 			{
 				printf("%-10d%-10s%-12s%-10s%-10d", j, table[i]->name, table[i]->entry_type, table[i]->data_type, table[i]->scope_level);
 				printf("%-s\n",table[i]->param);
 				j++;
+				memset(table[i],0,sizeof(struct symbol));
 				table[i]->scope_level = -1;
 			}
 		}
