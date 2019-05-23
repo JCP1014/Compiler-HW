@@ -1,13 +1,17 @@
-void func(float c, string d);
-float second(int c, float c);
-
+int a;
+int func();
 int main(){
-	float a = 3.5;
-	bool b = false;
+	a = 0;
+	void func(int a){
+		float b;
+	};
+	if(a>0){
+	int a = 5;
+	}
 	return 0;
 }
 
-void func(float c, string d){
+void func(float c, int d){
 	int a;
-	bool b;
+	int b;
 }

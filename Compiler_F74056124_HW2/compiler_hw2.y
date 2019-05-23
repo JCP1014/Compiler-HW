@@ -5,6 +5,7 @@
 #include <string.h>
 extern int yylineno;
 extern int yylex();
+void yyerror(char *s);
 extern char* yytext;   // Get current token from lex
 extern char buf[256];  // Get current code line from lex
 int scope = 0;
@@ -84,11 +85,11 @@ program
 ;
 
 stat
-    : declaration SEMICOLON 
-	| expression_stat SEMICOLON
+    : declaration
+	| expression_stat
 	| compound_stat 
-    | print_func SEMICOLON
-	| RET expression_stat SEMICOLON
+	| jump_stat
+    | print_func
 	| COMMENTLINE
 	| NEWLINE
 		{ 
@@ -114,19 +115,19 @@ stat
 declaration
     : type ID ASGN initializer
 		{			
-			if(lookup_symbol($2, scope, symbol_num) == -1)
+			if(lookup_symbol($2, scope, symbol_num) != -2)
 			{
 				insert_symbol(symbol_num, $2, "variable", $1, scope, NULL,0);
 				symbol_num++;
 			}
-			else
+			else 
 			{
 				set_err(2,"Redeclared variable",$2);
 			}
 		}
     | type ID
 		{			
-			if(lookup_symbol($2, scope, symbol_num) == -1)
+			if(lookup_symbol($2, scope, symbol_num) != -2)
 			{
 				insert_symbol(symbol_num, $2, "variable", $1, scope, NULL,0);
 				symbol_num++;
@@ -138,7 +139,8 @@ declaration
 		}
 	| type ID LB parameter_list RB
 		{			
-			if(lookup_symbol($2, scope, symbol_num) != -1)
+			int lookup_result = lookup_symbol($2, scope, symbol_num);
+			if(lookup_result == -2)
 			{
 				set_err(2,"Redeclared function",$2);
 			}
@@ -152,15 +154,18 @@ declaration
 			symbol_num -= param_num;
 			param_num = 0;
 		
-			char temp[256] = {0};
-			strncpy(temp,params,strlen(params)-2);
-			insert_symbol(symbol_num, $2, "function", $1, scope, temp,1);
-			symbol_num++;
+			if(lookup_result != -2)
+			{
+				char temp[256] = {0};
+				strncpy(temp,params,strlen(params)-2);
+				insert_symbol(symbol_num, $2, "function", $1, scope, temp,1);
+				symbol_num++;
+			}
 			memset(params,0,sizeof(params));
 		}
 	| type ID LB RB
 		{			
-			if(lookup_symbol($2, scope, symbol_num) == -1)
+			if(lookup_symbol($2, scope, symbol_num) != -2)
 			{
 				insert_symbol(symbol_num, $2, "function", $1, scope, NULL,1);
 				symbol_num++;
@@ -174,10 +179,85 @@ declaration
 ;
 
 expression_stat
-	: val expr
-	| assignment
-	| condition
-	| ID LB argument_list RB
+	: SEMICOLON
+	| expr SEMICOLON
+;
+
+expr
+	: assignment_expr
+	| expr COMMA assignment_expr
+;
+
+assignment_expr
+	: conditional_expr
+	| unary_expr assignment_operator assignment_expr
+;
+
+assignment_operator
+	: ASGN
+	| MULASGN
+	| DIVASGN
+	| MODASGN
+	| ADDASGN
+	| SUBASGN
+;
+
+conditional_expr
+	: logical_or_expr
+;
+
+logical_or_expr
+	: logical_and_expr
+	| logical_or_expr OR logical_and_expr
+;
+
+logical_and_expr
+	: relational_expr
+	| logical_and_expr AND relational_expr
+;
+
+relational_expr
+	: additive_expr
+	| relational_expr EQ additive_expr
+	| relational_expr NE additive_expr
+	| relational_expr LT additive_expr
+	| relational_expr MT additive_expr
+	| relational_expr LTE additive_expr
+	| relational_expr MTE additive_expr
+;
+
+additive_expr
+	: multiplicative_expr
+	| additive_expr ADD multiplicative_expr
+	| additive_expr SUB multiplicative_expr
+;
+
+multiplicative_expr
+	: cast_expr
+	| multiplicative_expr MUL cast_expr
+	| multiplicative_expr DIV cast_expr
+	| multiplicative_expr MOD cast_expr
+;
+
+cast_expr
+	: unary_expr
+	| LB type RB cast_expr
+;
+
+unary_expr
+	: postfix_expr
+	| unary_operator cast_expr
+;
+
+unary_operator
+	: ADD
+	| SUB
+	| NOT
+;
+
+postfix_expr
+	: primary_expr
+	| ID LB RB
 		{
 			if(lookup_symbol($1, scope, symbol_num) == -1)
 			{	
@@ -185,53 +265,39 @@ expression_stat
 			}
 
 		}
-	| ID LB RB
+	| ID LB argument_list RB
+		{
+			if(lookup_symbol($1, scope, symbol_num) == -1)
+			{	
+				set_err(2,"Undeclared function",$1);
+			}
+
+		}	
+	| postfix_expr INC
+	| postfix_expr DEC
+
 ;
 
-expr
-	: ADD val expr
-	| SUB val expr
-	| term
-;
-
-term
-	: unary
-	| MUL val expr
-	| DIV val expr
-	| MOD val expr 
-	| 
-;
-
-unary
+primary_expr
 	: val
-	| INC
-	| DEC
-;
-
-assignment
-	: ID ASGN expression_stat
-	| ID ADDASGN expression_stat
-	| ID SUBASGN expression_stat
-	| ID MULASGN expression_stat
-	| ID DIVASGN expression_stat
-	| ID MODASGN expression_stat
+	| LB expr RB
 ;
 
 compound_stat
-	: IF LB expression_stat RB LCB
+	: IF LB expr RB LCB
 		{
 			scope++;
 		}
-	| RCB ELSE IF LB expression_stat RB LCB
+	| RCB ELSE IF LB expr RB LCB
 	| RCB ELSE LCB
-	| WHILE LB expression_stat RB LCB
+	| WHILE LB expr RB LCB
 		{
 			scope++;
 		}
 	| type ID LB parameter_list RB LCB
 		{
 			int lookup_result = lookup_symbol($2, scope, symbol_num);
-			if(lookup_result == -1)
+			if(lookup_result == -1 || lookup_result == -3)
 			{
 				char temp[256];
 				strncpy(temp,params,strlen(params)-2);
@@ -260,7 +326,7 @@ compound_stat
 	| type ID LB RB LCB
 		{
 			int lookup_result = lookup_symbol($2, scope, symbol_num); 
-			if(lookup_result == -1)
+			if(lookup_result == -1 || lookup_result == -3)
 			{
 				insert_symbol(symbol_num, $2, "function", $1, scope, NULL,0);
 				symbol_num++;
@@ -279,16 +345,11 @@ compound_stat
 
 ;
 
-condition
-	: expression_stat MT expression_stat 	
-	| expression_stat LT expression_stat
-	| expression_stat MTE expression_stat
-	| expression_stat LTE expression_stat
-	| expression_stat EQ expression_stat
-	| expression_stat NE expression_stat
-	| condition AND condition
-	| condition OR condition
-	| NOT condition
+jump_stat
+	: CONT SEMICOLON
+	| BREAK SEMICOLON
+	| RET SEMICOLON
+	| RET expr SEMICOLON
 ;
 
 print_func
@@ -316,7 +377,7 @@ initializer
 			}
 		}
 	| STR_CONST
-	| expression_stat
+	| expr
 ;
 
 parameter_list
@@ -327,7 +388,7 @@ parameter_list
 parameter
 	: type ID
 		{
-			if(lookup_symbol($2, scope+1, symbol_num) == -1)
+			if(lookup_symbol($2, scope+1, symbol_num) != -2)
 			{
 				insert_symbol(symbol_num, $2, "parameter", $1, scope+1, NULL,0);
 				strcat(params,$1);
@@ -361,7 +422,7 @@ argument
 			}
 		}
 
-	| expression_stat
+	| expr
 ;
 
 val
