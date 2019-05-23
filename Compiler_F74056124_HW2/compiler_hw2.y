@@ -88,6 +88,7 @@ stat
 	| expression_stat SEMICOLON
 	| compound_stat 
     | print_func SEMICOLON
+	| RET expression_stat SEMICOLON
 	| COMMENTLINE
 	| NEWLINE
 		{ 
@@ -137,30 +138,25 @@ declaration
 		}
 	| type ID LB parameter_list RB
 		{			
-			if(lookup_symbol($2, scope, symbol_num) == -1)
-			{
-				insert_symbol(symbol_num, $2, "function", $1, scope, NULL,1);
-				symbol_num++;
-			}
-			else
+			if(lookup_symbol($2, scope, symbol_num) != -1)
 			{
 				set_err(2,"Redeclared function",$2);
 			}
 
-			int i,j;
+			int i;
 			for(i=0; i<param_num; i++)
 			{
-				for(j=0; j<=symbol_num; j++)
-				{
-					if(table[j]->index == param_index[i])
-					{	
-						memset(table[i], 0, sizeof(struct symbol));
-						table[i]->scope_level = -1;
-						break;
-					}
-				}
+				memset(table[param_index[i]], 0, sizeof(struct symbol));
+				table[param_index[i]]->scope_level = -1;
 			}
 			symbol_num -= param_num;
+			param_num = 0;
+		
+			char temp[256] = {0};
+			strncpy(temp,params,strlen(params)-2);
+			insert_symbol(symbol_num, $2, "function", $1, scope, temp,1);
+			symbol_num++;
+			memset(params,0,sizeof(params));
 		}
 	| type ID LB RB
 		{			
@@ -181,7 +177,6 @@ expression_stat
 	: val expr
 	| assignment
 	| condition
-	| RET expr
 	| ID LB argument_list RB
 		{
 			if(lookup_symbol($1, scope, symbol_num) == -1)
@@ -247,10 +242,13 @@ compound_stat
 			}
 			else if(lookup_result >= 0)
 			{
-				char temp[256];
-				strncpy(temp,params,strlen(params)-2);
-				strcpy(table[lookup_result]->param, temp);
-				memset(params,0,sizeof(params));
+				if(table[lookup_result]->param==NULL)
+				{
+					char temp[256] = {0};
+					strncpy(temp,params,strlen(params)-2);
+					strcpy(table[lookup_result]->param, temp);
+					memset(params,0,sizeof(params));
+				}
 			}
 			else
 			{
@@ -332,18 +330,20 @@ parameter
 			if(lookup_symbol($2, scope+1, symbol_num) == -1)
 			{
 				insert_symbol(symbol_num, $2, "parameter", $1, scope+1, NULL,0);
-				symbol_num++;
 				strcat(params,$1);
 				strcat(params,", ");
 
 				param_index[param_num] = symbol_num;
+				symbol_num++;
 				param_num++;
 			}
 			else
 			{
 				set_err(2,"Redeclared variable",$2);
-			}
+				strcat(params,$1);
+				strcat(params,", ");
 
+			}
 		}
 ;
 
