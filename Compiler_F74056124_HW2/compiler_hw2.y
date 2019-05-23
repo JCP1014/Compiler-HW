@@ -97,7 +97,7 @@ stat
 	| COMMENTLINE
 	| NEWLINE
 		{ 
-			if(strlen(buf) < 1)
+			if(strlen(buf) < 1)	// If there is no code in the line, don't print the blank after line number 
 				printf("%d:\n",yylineno);
 			else
 				printf("%d: %s\n", yylineno, buf); 
@@ -108,12 +108,12 @@ stat
 			if(dump == 1)
 			{
 				dump_symbol(symbol_num,scope);
-				if(add_scope==0)
+				if(add_scope==0)	// If the flag is 1, the increment will be cancel out, so no need to decrease scope	
 					scope--;
-				dump = 0;
-				add_scope = 0;
+				dump = 0;	// Reset
+				add_scope = 0;	// Reset
 			}
-			memset(buf, 0, sizeof(buf));
+			memset(buf, 0, sizeof(buf));	// Clear buffer
 		}
 
 ;
@@ -151,6 +151,7 @@ declaration
 				set_err(2,"Redeclared function",$2);
 			}
 
+			/* Dont't insert parameters to table when function declaration */
 			int i;
 			for(i=0; i<param_num; i++)
 			{
@@ -160,6 +161,7 @@ declaration
 			symbol_num -= param_num;
 			param_num = 0;
 		
+			/* Insert funcion */
 			if(lookup_result != -2 && lookup_result < 0)
 			{
 				char temp[256] = {0};
@@ -197,7 +199,7 @@ expr
 
 assignment_expr
 	: conditional_expr
-	| unary_expr assignment_operator assignment_expr
+	| ID assignment_operator assignment_expr
 ;
 
 assignment_operator
@@ -280,8 +282,8 @@ postfix_expr
 			}
 
 		}	
-	| postfix_expr INC
-	| postfix_expr DEC
+	| ID INC
+	| ID DEC
 
 ;
 
@@ -299,7 +301,7 @@ compound_stat
 		}
 	| RCB ELSE IF LB expr RB LCB
 		{
-			if(if_count<1 || lcb_count<1)
+			if(if_count<1 || lcb_count<1)	// No IF to match or brackets are not in balence 
 			{
 				yyerror("syntax error");
 				exit(0);
@@ -309,13 +311,13 @@ compound_stat
 		}
 	| RCB ELSE LCB
 		{
-			dump = 1;
-			add_scope = 1;
-			if(if_count < 1 || lcb_count<1)
+			if(if_count < 1 || lcb_count<1)	
 			{
 				yyerror("syntax error");
 				exit(0);
 			}
+			dump = 1;
+			add_scope = 1;
 			if_count--;
 		}
 	| WHILE LB expr RB LCB
@@ -327,7 +329,7 @@ compound_stat
 		{
 			lcb_count++;
 			int lookup_result = lookup_symbol($2, scope, symbol_num);
-			if(lookup_result == -1 || lookup_result == -3)
+			if(lookup_result == -1 || lookup_result == -3)	// If function undeclared, insert it and its parameters
 			{
 				char temp[256];
 				strncpy(temp,params,strlen(params)-2);
@@ -336,7 +338,7 @@ compound_stat
 				memset(params,0,sizeof(params));
 
 			}
-			else if(lookup_result >= 0)
+			else if(lookup_result >= 0)	// If function forward declared, insert its attribute
 			{
 				if(table[lookup_result]->param==NULL)
 				{
@@ -372,13 +374,13 @@ compound_stat
 	| RCB
 		{	
 			lcb_count--;
-			if(lcb_count<0)
+			if(lcb_count<0)	// Brackets are not in balence
 			{
 				yyerror("syntax error");
 				exit(0);
 			}
 			if_count = 0;
-			dump = 1;
+			dump = 1;	// flag to indicate to dump table when meet NEWLINE later
 		}
 
 ;
@@ -432,7 +434,7 @@ parameter
 				strcat(params,$1);
 				strcat(params,", ");
 
-				param_index[param_num] = symbol_num;
+				param_index[param_num] = symbol_num;	// Record the index for removing later when function declaration
 				symbol_num++;
 				param_num++;
 			}
@@ -496,12 +498,12 @@ int main(int argc, char** argv)
     yylineno = 0;
 	memset(params,0,sizeof(params));
     yyparse();
-	if(lcb_count>0 && err_flag!=1)
+	if(lcb_count>0 && err_flag!=1)	// If brackets are not in balence
 	{
 		yyerror("syntax error");
 		exit(0);
 	}
-	if(err_flag!=1)
+	if(err_flag!=1)	// If no syntax error, dump global symbol at the end
 	{
 		dump_symbol(symbol_num,0);
 		printf("\nTotal lines: %d \n",yylineno);
@@ -530,12 +532,12 @@ void semantic_error()
     printf("| Error found in line %d: %s\n", yylineno, buf);
 	printf("| %s %s", err_type, err_symbol);
     printf("\n|-----------------------------------------------|\n\n");
-	err_flag = 0;
+	err_flag = 0;	// reset
 }
 
 void set_err(int flag, char *type, char *symbol)
 {
-	err_flag = flag;
+	err_flag = flag;	// 0: No error;  1: syntatic error;  2: semantic error
 	strcpy(err_type, type);
 	strcpy(err_symbol, symbol);
 }
