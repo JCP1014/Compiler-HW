@@ -15,8 +15,12 @@ char err_type[20];
 char err_symbol[256];
 char params[256];
 int dump = 0;
+int add_scope = 0;
 int param_index[30];
 int param_num = 0;
+int lcb_count = 0;
+int if_count = 0;
+
 
 /* Symbol table function - you can add new function if needed. */
 int lookup_symbol(char *name, int scope_level, int symbol_num);
@@ -104,8 +108,10 @@ stat
 			if(dump == 1)
 			{
 				dump_symbol(symbol_num,scope);
-				scope--;
+				if(add_scope==0)
+					scope--;
 				dump = 0;
+				add_scope = 0;
 			}
 			memset(buf, 0, sizeof(buf));
 		}
@@ -140,7 +146,7 @@ declaration
 	| type ID LB parameter_list RB
 		{			
 			int lookup_result = lookup_symbol($2, scope, symbol_num);
-			if(lookup_result == -2)
+			if(lookup_result == -2 || lookup_result >= 0)
 			{
 				set_err(2,"Redeclared function",$2);
 			}
@@ -154,7 +160,7 @@ declaration
 			symbol_num -= param_num;
 			param_num = 0;
 		
-			if(lookup_result != -2)
+			if(lookup_result != -2 && lookup_result < 0)
 			{
 				char temp[256] = {0};
 				strncpy(temp,params,strlen(params)-2);
@@ -165,14 +171,15 @@ declaration
 		}
 	| type ID LB RB
 		{			
-			if(lookup_symbol($2, scope, symbol_num) != -2)
+			int lookup_result = lookup_symbol($2, scope, symbol_num);
+			if(lookup_result == -2 || lookup_result >= 0)
 			{
-				insert_symbol(symbol_num, $2, "function", $1, scope, NULL,1);
-				symbol_num++;
+				set_err(2,"Redeclared function",$2);
 			}
 			else
 			{
-				set_err(2,"Redeclared function",$2);
+				insert_symbol(symbol_num, $2, "function", $1, scope, NULL,1);
+				symbol_num++;
 			}
 		}
 
@@ -286,16 +293,39 @@ primary_expr
 compound_stat
 	: IF LB expr RB LCB
 		{
+			lcb_count++;
+			if_count++;
 			scope++;
 		}
 	| RCB ELSE IF LB expr RB LCB
+		{
+			if(if_count<1 || lcb_count<1)
+			{
+				yyerror("syntax error");
+				exit(0);
+			}
+			dump = 1;
+			add_scope = 1;
+		}
 	| RCB ELSE LCB
+		{
+			dump = 1;
+			add_scope = 1;
+			if(if_count < 1 || lcb_count<1)
+			{
+				yyerror("syntax error");
+				exit(0);
+			}
+			if_count--;
+		}
 	| WHILE LB expr RB LCB
 		{
+			lcb_count++;
 			scope++;
 		}
 	| type ID LB parameter_list RB LCB
 		{
+			lcb_count++;
 			int lookup_result = lookup_symbol($2, scope, symbol_num);
 			if(lookup_result == -1 || lookup_result == -3)
 			{
@@ -325,6 +355,7 @@ compound_stat
 	}
 	| type ID LB RB LCB
 		{
+			lcb_count++;
 			int lookup_result = lookup_symbol($2, scope, symbol_num); 
 			if(lookup_result == -1 || lookup_result == -3)
 			{
@@ -340,6 +371,13 @@ compound_stat
 		}
 	| RCB
 		{	
+			lcb_count--;
+			if(lcb_count<0)
+			{
+				yyerror("syntax error");
+				exit(0);
+			}
+			if_count = 0;
 			dump = 1;
 		}
 
@@ -458,6 +496,11 @@ int main(int argc, char** argv)
     yylineno = 0;
 	memset(params,0,sizeof(params));
     yyparse();
+	if(lcb_count>0 && err_flag!=1)
+	{
+		yyerror("syntax error");
+		exit(0);
+	}
 	if(err_flag!=1)
 	{
 		dump_symbol(symbol_num,0);
