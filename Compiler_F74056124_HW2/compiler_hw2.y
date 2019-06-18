@@ -200,6 +200,12 @@ expr
 assignment_expr
 	: conditional_expr
 	| ID assignment_operator assignment_expr
+		{
+			if(lookup_symbol($1, scope, symbol_num) == -1)
+			{
+				set_err(2,"Undeclared variable",$1);
+			}
+		}
 ;
 
 assignment_operator
@@ -295,43 +301,43 @@ primary_expr
 compound_stat
 	: IF LB expr RB LCB
 		{
-			lcb_count++;
-			if_count++;
+			//lcb_count++;
+			//if_count++;
 			scope++;
 		}
 	| RCB ELSE IF LB expr RB LCB
 		{
-			if(if_count<1 || lcb_count<1)	// No IF to match or brackets are not in balence 
+			/*if(if_count<1 || lcb_count<1)	// No IF to match or brackets are not in balence 
 			{
 				yyerror("syntax error");
 				exit(0);
-			}
+			}*/
 			dump = 1;
 			add_scope = 1;
 		}
 	| RCB ELSE LCB
 		{
-			if(if_count < 1 || lcb_count<1)	
+			/*if(if_count < 1 || lcb_count<1)	
 			{
 				yyerror("syntax error");
 				exit(0);
-			}
+			}*/
 			dump = 1;
 			add_scope = 1;
-			if_count--;
+			//if_count--;
 		}
 	| WHILE LB expr RB LCB
 		{
-			lcb_count++;
+			//lcb_count++;
 			scope++;
 		}
 	| type ID LB parameter_list RB LCB
 		{
-			lcb_count++;
+			//lcb_count++;
 			int lookup_result = lookup_symbol($2, scope, symbol_num);
 			if(lookup_result == -1 || lookup_result == -3)	// If function undeclared, insert it and its parameters
 			{
-				char temp[256];
+				char temp[256] = {0};
 				strncpy(temp,params,strlen(params)-2);
 				insert_symbol(symbol_num, $2, "function", $1, scope, temp,0);
 				symbol_num++;
@@ -357,7 +363,7 @@ compound_stat
 	}
 	| type ID LB RB LCB
 		{
-			lcb_count++;
+			//lcb_count++;
 			int lookup_result = lookup_symbol($2, scope, symbol_num); 
 			if(lookup_result == -1 || lookup_result == -3)
 			{
@@ -373,13 +379,13 @@ compound_stat
 		}
 	| RCB
 		{	
-			lcb_count--;
-			if(lcb_count<0)	// Brackets are not in balence
+			//lcb_count--;
+			/*if(lcb_count<0)	// Brackets are not in balence
 			{
 				yyerror("syntax error");
 				exit(0);
-			}
-			if_count = 0;
+			}*/
+			//if_count = 0;
 			dump = 1;	// flag to indicate to dump table when meet NEWLINE later
 		}
 
@@ -498,11 +504,11 @@ int main(int argc, char** argv)
     yylineno = 0;
 	memset(params,0,sizeof(params));
     yyparse();
-	if(lcb_count>0 && err_flag!=1)	// If brackets are not in balence
+	/*if(lcb_count>0 && err_flag!=1)	// If brackets are not in balence
 	{
 		yyerror("syntax error");
 		exit(0);
-	}
+	}*/
 	if(err_flag!=1)	// If no syntax error, dump global symbol at the end
 	{
 		dump_symbol(symbol_num,0);
