@@ -3,36 +3,24 @@
 .method public static main([Ljava/lang/String;)V
 .limit stack 50
 .limit locals 50
-	ldc 20
+	ldc 1
 	istore 0
+BEGIN1_1:
 	iload 0
-	ldc 40
+	ldc 6
 	isub
-	ifeq LABEL1_1_1
-	goto END1_1_1
-LABEL1_1_1:
-	ldc "a is equal to 40"
-	getstatic java/lang/System/out Ljava/io/PrintStream;
-	swap
-	invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V
-	goto EXIT1_1
-END1_1_1:
+	iflt TRUE1_1
+	goto FALSE1_1
+TRUE1_1:
 	iload 0
-	ldc 40
-	isub
-	ifgt LABEL1_1_2
-	goto END1_1_2
-LABEL1_1_2:
-	ldc "a is larger than 40"
-	getstatic java/lang/System/out Ljava/io/PrintStream;
-	swap
-	invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V
-	goto  EXIT1_1
-END1_1_2:
-	ldc 666
 	getstatic java/lang/System/out Ljava/io/PrintStream;
 	swap
 	invokevirtual java/io/PrintStream/println(I)V
-EXIT1_1:
+	iload 0
+	ldc 1
+	iadd
+	istore 0
+	goto BEGIN1_1
+FALSE1_1:
 	return
 .end method

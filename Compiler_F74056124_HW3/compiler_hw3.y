@@ -26,14 +26,18 @@ int param_num = 0;
 int funcReg_num = 0;	// number of variables in function definition
 char funcReg_type[50] = {0}; // type of parameters in the form of jasmin type descriptoir
 char return_type = 0;
+
 int reg_num = 0;
 char reg_type[50][7] = {0};
 char op_type = 0;	// operand type
 char relation_flag = 0;
-int group[50] = {0};
-int branch[50] = {0};
-int end_flag[50] = {0};
-int exit_flag[50] = {0};
+int if_group[50] = {0};
+int if_branch[50] = {0};
+int if_endFlag[50] = {0};
+int if_exitFlag[50] = {0};
+int while_group[50] = {0};
+int while_exitFlag[50] = {0};
+
 
 FILE *file; // To generate .j file for Jasmin
 
@@ -703,55 +707,55 @@ relational_expr
 relational_operand
 	: I_CONST
 		{
-			if(end_flag[scope-1]==1)
+			if(if_endFlag[scope-1]==1)
 			{
-				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, group[scope-1]);
-				fprintf(file, "END%d_%d_%d:\n", scope-1, group[scope-1], branch[scope-1]);
-				end_flag[scope-1] = 0; 
+				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, if_group[scope-1]);
+				fprintf(file, "END%d_%d_%d:\n", scope-1, if_group[scope-1], if_branch[scope-1]);
+				if_endFlag[scope-1] = 0; 
 			}
 			fprintf(file, "\tldc %d\n", $1);
 			op_type = 'I';
 		}
 	| F_CONST
 		{
-			if(end_flag[scope-1]==1)
+			if(if_endFlag[scope-1]==1)
 			{
-				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, group[scope-1]);
-				fprintf(file, "END%d_%d_%d:\n", scope-1, group[scope-1], branch[scope-1]);
-				end_flag[scope-1] = 0; 
+				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, if_group[scope-1]);
+				fprintf(file, "END%d_%d_%d:\n", scope-1, if_group[scope-1], if_branch[scope-1]);
+				if_endFlag[scope-1] = 0; 
 			}
 			fprintf(file, "\tldc %f\n", $1);
 			op_type = 'F';
 		}
 	| TRUE
 		{
-			if(end_flag[scope-1]==1)
+			if(if_endFlag[scope-1]==1)
 			{
-				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, group[scope-1]);
-				fprintf(file, "END%d_%d_%d:\n", scope-1, group[scope-1], branch[scope-1]);
-				end_flag[scope-1] = 0; 
+				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, if_group[scope-1]);
+				fprintf(file, "END%d_%d_%d:\n", scope-1, if_group[scope-1], if_branch[scope-1]);
+				if_endFlag[scope-1] = 0; 
 			}
 			fprintf(file, "\tldc 1\n");
 			op_type = 'I';
 		}
 	| FALSE
 		{
-			if(end_flag[scope-1]==1)
+			if(if_endFlag[scope-1]==1)
 			{
-				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, group[scope-1]);
-				fprintf(file, "END%d_%d_%d:\n", scope-1, group[scope-1], branch[scope-1]);
-				end_flag[scope-1] = 0; 
+				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, if_group[scope-1]);
+				fprintf(file, "END%d_%d_%d:\n", scope-1, if_group[scope-1], if_branch[scope-1]);
+				if_endFlag[scope-1] = 0; 
 			}
 			fprintf(file, "\tldc 0\n");
 			op_type = 'I';
 		}
 	| ID
 		{
-			if(end_flag[scope-1]==1)
+			if(if_endFlag[scope-1]==1)
 			{
-				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, group[scope-1]);
-				fprintf(file, "END%d_%d_%d:\n", scope-1, group[scope-1], branch[scope-1]);
-				end_flag[scope-1] = 0; 
+				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, if_group[scope-1]);
+				fprintf(file, "END%d_%d_%d:\n", scope-1, if_group[scope-1], if_branch[scope-1]);
+				if_endFlag[scope-1] = 0; 
 			}
 
 			int lookup_result = lookup_symbol($1, scope, symbol_num);
@@ -1019,8 +1023,69 @@ postfix_expr
 
 		}	
 	| ID INC
-	| ID DEC
+		{
+			int lookup_result = lookup_symbol($1, scope, symbol_num);
+			if(lookup_result == -1)
+			{
+				set_err(2,"Undeclared variable",$1);
+			}
+			else
+			{
+				int reg = get_register(symbol_table, $1, scope, symbol_num);
+				if(reg==-1)		// global variable
+				{	
+					fprintf(file, "\tgetstatic %s/%s I\n", CLASS_NAME, $1);
+				}
+				else	// local variable
+				{
+					fprintf(file, "\tiload %d\n",reg);
+				}
 
+				fprintf(file,"\tldc 1\n"
+							"\tiadd\n");
+
+				if(reg==-1)		// global variable
+				{	
+					fprintf(file, "\tputstatic %s/%s I\n", CLASS_NAME, $1);
+				}
+				else	// local variable
+				{
+					fprintf(file, "\tistore %d\n",reg);
+				}
+			}
+		}
+	| ID DEC
+		{
+			int lookup_result = lookup_symbol($1, scope, symbol_num);
+			if(lookup_result == -1)
+			{
+				set_err(2,"Undeclared variable",$1);
+			}
+			else
+			{
+				int reg = get_register(symbol_table, $1, scope, symbol_num);
+				if(reg==-1)		// global variable
+				{	
+					fprintf(file, "\tgetstatic %s/%s I\n", CLASS_NAME, $1);
+				}
+				else	// local variable
+				{
+					fprintf(file, "\tiload %d\n",reg);
+				}
+
+				fprintf(file,"\tldc 1\n"
+							"\tisub\n");
+
+				if(reg==-1)		// global variable
+				{	
+					fprintf(file, "\tputstatic %s/%s I\n", CLASS_NAME, $1);
+				}
+				else	// local variable
+				{
+					fprintf(file, "\tistore %d\n",reg);
+				}
+			}
+		}
 ;
 
 primary_expr
@@ -1032,88 +1097,89 @@ compound_stat
 	: IF LB expr RB LCB
 		{
 			++scope;
-			++group[scope-1];
-			branch[scope-1] = 1;
-			end_flag[scope-1] = 1;
-			exit_flag[scope-1] = 1;
+			++if_group[scope-1];
+			if_branch[scope-1] = 1;
+			if_endFlag[scope-1] = 1;
+			if_exitFlag[scope-1] = 1;
 			switch(relation_flag)
 			{
 				case 'E':
 				{
-					fprintf(file, "\tifeq LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					fprintf(file, "\tifeq LABEL%d_%d_%d\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 					break;
 				}
 				case 'N':
 				{
-					fprintf(file, "\tifne LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					fprintf(file, "\tifne LABEL%d_%d_%d\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 					break;
 				}
 				case 'l':
 				{
-					fprintf(file, "\tiflt LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					fprintf(file, "\tiflt LABEL%d_%d_%d\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 					break;
 				}
 				case 'm':
 				{
-					fprintf(file, "\tifgt LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					fprintf(file, "\tifgt LABEL%d_%d_%d\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 					break;
 				}
 				case 'L':
 				{
-					fprintf(file, "\tifle LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					fprintf(file, "\tifle LABEL%d_%d_%d\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 					break;
 				}
 				case 'M':
 				{
-					fprintf(file, "\tifge LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					fprintf(file, "\tifge LABEL%d_%d_%d\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 					break;
 				}
 			}
-			fprintf(file, "\tgoto END%d_%d_%d\n", scope-1, group[scope-1],branch[scope-1]);
-			fprintf(file, "LABEL%d_%d_%d:\n", scope-1, group[scope-1], branch[scope-1]);
+			fprintf(file, "\tgoto END%d_%d_%d\n", scope-1, if_group[scope-1],if_branch[scope-1]);
+			fprintf(file, "LABEL%d_%d_%d:\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 		}
 	| RCB ELSE IF LB expr RB LCB
 		{
 			dump = 1;
 			add_scope = 1;
 			
-			++branch[scope-1];
-			end_flag[scope-1] = 1;
+			++if_branch[scope-1];
+			if_endFlag[scope-1] = 1;
 			switch(relation_flag)
 			{
 				case 'E':
 				{
-					fprintf(file, "\tifeq LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					fprintf(file, "\tifeq LABEL%d_%d_%d\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 					break;
 				}
 				case 'N':
 				{
-					fprintf(file, "\tifne LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					fprintf(file, "\tifne LABEL%d_%d_%d\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 					break;
 				}
 				case 'l':
 				{
-					fprintf(file, "\tiflt LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					fprintf(file, "\tiflt LABEL%d_%d_%d\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 					break;
 				}
 				case 'm':
 				{
-					fprintf(file, "\tifgt LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					fprintf(file, "\tifgt LABEL%d_%d_%d\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 					break;
 				}
 				case 'L':
 				{
-					fprintf(file, "\tifle LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					fprintf(file, "\tifle LABEL%d_%d_%d\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 					break;
 				}
 				case 'M':
 				{
-					fprintf(file, "\tifge LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					fprintf(file, "\tifge LABEL%d_%d_%d\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 					break;
 				}
 			}
-			fprintf(file, "\tgoto END%d_%d_%d\n", scope-1, group[scope-1],branch[scope-1]);
-			fprintf(file, "LABEL%d_%d_%d:\n", scope-1, group[scope-1], branch[scope-1]);
+			relation_flag = 0;
+			fprintf(file, "\tgoto END%d_%d_%d\n", scope-1, if_group[scope-1],if_branch[scope-1]);
+			fprintf(file, "LABEL%d_%d_%d:\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 
 		}
 	| RCB ELSE LCB
@@ -1121,13 +1187,50 @@ compound_stat
 			dump = 1;
 			add_scope = 1;
 			
-			end_flag[scope-1] = 0;
-			fprintf(file, "\tgoto  EXIT%d_%d\n", scope-1, group[scope-1]);
-			fprintf(file, "END%d_%d_%d:\n", scope-1, group[scope-1], branch[scope-1]);
+			if_endFlag[scope-1] = 0;
+			fprintf(file, "\tgoto  EXIT%d_%d\n", scope-1, if_group[scope-1]);
+			fprintf(file, "END%d_%d_%d:\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 		}
-	| WHILE LB expr RB LCB
+	| while LB expr RB LCB
 		{
 			++scope;
+			
+			switch(relation_flag)
+			{
+				case 'E':
+				{
+					fprintf(file, "\tifeq TRUE%d_%d\n", scope-1, while_group[scope-1]);
+					break;
+				}
+				case 'N':
+				{
+					fprintf(file, "\tifne TRUE%d_%d\n", scope-1, while_group[scope-1]);
+					break;
+				}
+				case 'l':
+				{
+					fprintf(file, "\tiflt TRUE%d_%d\n", scope-1, while_group[scope-1]);
+					break;
+				}
+				case 'm':
+				{
+					fprintf(file, "\tifgt TRUE%d_%d\n", scope-1, while_group[scope-1]);
+					break;
+				}
+				case 'L':
+				{
+					fprintf(file, "\tifle TRUE%d_%d\n", scope-1, while_group[scope-1]);
+					break;
+				}
+				case 'M':
+				{
+					fprintf(file, "\tifge TRUE%d_%d\n", scope-1, while_group[scope-1]);
+					break;
+				}
+			}
+			relation_flag = 0;
+			fprintf(file, "\tgoto FALSE%d_%d\n", scope-1, while_group[scope-1]);
+			fprintf(file, "TRUE%d_%d:\n", scope-1, while_group[scope-1]);
 		}
 	| type ID LB parameter_list RB LCB
 		{
@@ -1338,21 +1441,35 @@ compound_stat
 	| RCB
 		{	
 			dump = 1;	// flag to indicate to dump table when meet NEWLINE later
-			if(end_flag[scope-1] == 1)
+			if(if_endFlag[scope-1] == 1)
 			{
-				printf("XXXXXXXXXXXXXXXXXXXX\n");
-				//fprintf(file, "\tgoto EXIT%d_%d\n", scope, group[scope]);
-				fprintf(file, "END%d_%d_%d:\n", scope-1, group[scope-1], branch[scope-1]);
-				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, group[scope-1]);
-				end_flag[scope-1] = 0; 
+				//fprintf(file, "\tgoto EXIT%d_%d\n", scope, if_group[scope]);
+				fprintf(file, "END%d_%d_%d:\n", scope-1, if_group[scope-1], if_branch[scope-1]);
+				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, if_group[scope-1]);
+				if_endFlag[scope-1] = 0; 
 			}
-			if(exit_flag[scope-1] == 1)
+			if(if_exitFlag[scope-1] == 1)
 			{
-				fprintf(file, "EXIT%d_%d:\n", scope-1, group[scope-1]);
-				exit_flag[scope-1] = 0;
+				fprintf(file, "EXIT%d_%d:\n", scope-1, if_group[scope-1]);
+				if_exitFlag[scope-1] = 0;
+			}
+			if(while_exitFlag[scope-1]==1)
+			{
+				fprintf(file, "\tgoto BEGIN%d_%d\n", scope-1, while_group[scope-1]);
+				fprintf(file, "FALSE%d_%d:\n", scope-1, while_group[scope-1]);
+				while_exitFlag[scope-1] = 0;
 			}
 		}
 
+;
+
+while
+	: WHILE
+		{
+			++while_group[scope];
+			while_exitFlag[scope] = 1;
+			fprintf(file, "BEGIN%d_%d:\n", scope, while_group[scope]);
+		}
 ;
 
 jump_stat
