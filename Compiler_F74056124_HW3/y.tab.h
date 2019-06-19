@@ -58,45 +58,45 @@ extern int yydebug;
     LTE = 268,
     EQ = 269,
     NE = 270,
-    ASGN = 271,
-    ADDASGN = 272,
-    SUBASGN = 273,
-    MULASGN = 274,
-    DIVASGN = 275,
-    MODASGN = 276,
-    AND = 277,
-    OR = 278,
-    NOT = 279,
-    LB = 280,
-    RB = 281,
-    LCB = 282,
-    RCB = 283,
-    LSB = 284,
-    RSB = 285,
-    COMMA = 286,
-    PRINT = 287,
-    IF = 288,
-    ELSE = 289,
-    FOR = 290,
-    WHILE = 291,
-    RET = 292,
-    CONT = 293,
-    BREAK = 294,
-    QUOTA = 295,
-    COMMENTLINE = 296,
-    NEWLINE = 297,
-    SEMICOLON = 298,
-    I_CONST = 299,
-    F_CONST = 300,
-    STR_CONST = 301,
-    TRUE = 302,
-    FALSE = 303,
-    ID = 304,
-    INT = 305,
-    FLOAT = 306,
-    BOOL = 307,
-    STRING = 308,
-    VOID = 309
+    AND = 271,
+    OR = 272,
+    NOT = 273,
+    LB = 274,
+    RB = 275,
+    LCB = 276,
+    RCB = 277,
+    LSB = 278,
+    RSB = 279,
+    COMMA = 280,
+    PRINT = 281,
+    IF = 282,
+    ELSE = 283,
+    FOR = 284,
+    WHILE = 285,
+    RET = 286,
+    CONT = 287,
+    BREAK = 288,
+    QUOTA = 289,
+    COMMENTLINE = 290,
+    NEWLINE = 291,
+    SEMICOLON = 292,
+    I_CONST = 293,
+    F_CONST = 294,
+    STR_CONST = 295,
+    TRUE = 296,
+    FALSE = 297,
+    ID = 298,
+    INT = 299,
+    FLOAT = 300,
+    BOOL = 301,
+    STRING = 302,
+    VOID = 303,
+    ASGN = 304,
+    ADDASGN = 305,
+    SUBASGN = 306,
+    MULASGN = 307,
+    DIVASGN = 308,
+    MODASGN = 309
   };
 #endif
 /* Tokens.  */
@@ -113,52 +113,52 @@ extern int yydebug;
 #define LTE 268
 #define EQ 269
 #define NE 270
-#define ASGN 271
-#define ADDASGN 272
-#define SUBASGN 273
-#define MULASGN 274
-#define DIVASGN 275
-#define MODASGN 276
-#define AND 277
-#define OR 278
-#define NOT 279
-#define LB 280
-#define RB 281
-#define LCB 282
-#define RCB 283
-#define LSB 284
-#define RSB 285
-#define COMMA 286
-#define PRINT 287
-#define IF 288
-#define ELSE 289
-#define FOR 290
-#define WHILE 291
-#define RET 292
-#define CONT 293
-#define BREAK 294
-#define QUOTA 295
-#define COMMENTLINE 296
-#define NEWLINE 297
-#define SEMICOLON 298
-#define I_CONST 299
-#define F_CONST 300
-#define STR_CONST 301
-#define TRUE 302
-#define FALSE 303
-#define ID 304
-#define INT 305
-#define FLOAT 306
-#define BOOL 307
-#define STRING 308
-#define VOID 309
+#define AND 271
+#define OR 272
+#define NOT 273
+#define LB 274
+#define RB 275
+#define LCB 276
+#define RCB 277
+#define LSB 278
+#define RSB 279
+#define COMMA 280
+#define PRINT 281
+#define IF 282
+#define ELSE 283
+#define FOR 284
+#define WHILE 285
+#define RET 286
+#define CONT 287
+#define BREAK 288
+#define QUOTA 289
+#define COMMENTLINE 290
+#define NEWLINE 291
+#define SEMICOLON 292
+#define I_CONST 293
+#define F_CONST 294
+#define STR_CONST 295
+#define TRUE 296
+#define FALSE 297
+#define ID 298
+#define INT 299
+#define FLOAT 300
+#define BOOL 301
+#define STRING 302
+#define VOID 303
+#define ASGN 304
+#define ADDASGN 305
+#define SUBASGN 306
+#define MULASGN 307
+#define DIVASGN 308
+#define MODASGN 309
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 
 union YYSTYPE
 {
-#line 65 "compiler_hw3.y" /* yacc.c:1909  */
+#line 76 "compiler_hw3.y" /* yacc.c:1909  */
 
 	int i_val;
     double f_val;

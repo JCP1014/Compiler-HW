@@ -2,7 +2,8 @@
 %{
 #include "stdio.h" 
 #include "stdlib.h"
-#include "string.h" 
+#include "string.h"
+#include "math.h"
 #define BUF_SIZE 256
 #define CLASS_NAME "compiler_hw3"
 
@@ -19,15 +20,20 @@ char err_symbol[BUF_SIZE] = {0};
 char params[BUF_SIZE] = {0};
 int dump = 0;
 int add_scope = 0;
+int func_flag = 0;
 int param_index[50] = {0};
 int param_num = 0;
-int global_num = 0; // number of global variable
-int func_num = 0;	// number of function sybol
-char param_type[50] = {0}; // type of parameters in the form of jasmin type descriptoir
+int funcReg_num = 0;	// number of variables in function definition
+char funcReg_type[50] = {0}; // type of parameters in the form of jasmin type descriptoir
 char return_type = 0;
 int reg_num = 0;
 char reg_type[50][7] = {0};
 char op_type = 0;	// operand type
+char relation_flag = 0;
+int group[50] = {0};
+int branch[50] = {0};
+int end_flag[50] = {0};
+int exit_flag[50] = {0};
 
 FILE *file; // To generate .j file for Jasmin
 
@@ -41,6 +47,9 @@ struct symbol
 	char param[256];
 	int forward;
 	int reg;
+	int value_i;
+	double value_f;
+
 }**symbol_table;
 
 void yyerror(char *s);
@@ -52,6 +61,8 @@ void insert_symbol(int index, char *name, char *entry_type, char *data_type, int
 void dump_symbol();
 int get_register(struct symbol **table, char *name, int scope_level, int symbol_num);
 char* get_type(char *name, int scope_level, int symbol_num);
+char* get_attribute(char *name, int scope_level, int symbol_num);
+void store_value(char *name, int scope_level, int symbol_num, double value);
 
 /* error functions */
 void semantic_error();
@@ -71,7 +82,6 @@ void gencode_function();
 /* Token without return */
 %token ADD SUB MUL DIV MOD INC DEC
 %token MT LT MTE LTE EQ NE
-%token ASGN ADDASGN SUBASGN MULASGN DIVASGN MODASGN
 %token AND OR NOT
 %token LB RB LCB RCB LSB RSB COMMA
 %token PRINT IF ELSE FOR WHILE
@@ -84,12 +94,15 @@ void gencode_function();
 %token <string> STR_CONST
 %token <i_val> TRUE FALSE
 %token <string> ID
-%token <string> INT FLOAT BOOL STRING VOID 
+%token <string> INT FLOAT BOOL STRING VOID
+%token <string> ASGN ADDASGN SUBASGN MULASGN DIVASGN MODASGN
 
 /* Nonterminal with return, which need to sepcify type */
 %type <string> type
 %type <f_val> initializer
 %type <f_val> val
+%type <f_val> expression_stat
+%type <f_val> expr
 %type <f_val> assignment_expr
 %type <f_val> conditional_expr
 %type <f_val> logical_or_expr
@@ -101,6 +114,8 @@ void gencode_function();
 %type <f_val> unary_expr
 %type <f_val> postfix_expr
 %type <f_val> primary_expr
+%type <string> opassign_operator
+%type <string> opassign_operand
 
 /* Yacc will start at this nonterminal */
 %start program
@@ -134,11 +149,19 @@ stat
 			{
 				dump_symbol(symbol_num,scope);
 				if(add_scope==0)	// If the flag is 1, the increment will be cancel out, so no need to decrease scope	
-					scope--;
+					--scope;
 				dump = 0;	// Reset
 				add_scope = 0;	// Reset
+				if(func_flag==1 && scope==0)
+					func_flag = 0;
+			}
+			if(func_flag==0)
+			{
+				funcReg_num  = 0;
 			}
 			memset(buf, 0, sizeof(buf));	// Clear buffer
+			op_type = 0;
+			relation_flag = 0;
 		}
 
 ;
@@ -151,36 +174,59 @@ declaration
 				
 				if(scope==0)
 				{
-					global_num++;
 					insert_symbol(symbol_num, $2, "variable", $1, scope, NULL, 0, -1);
 					if(strcmp($1,"int")==0)
 						fprintf(file,".field public static %s I = %d\n", $2, (int)$4);
 					else if(strcmp($1, "float")==0)
-						fprintf(file,".field public static %s F = %f\n", $2, (float)$4);
+						fprintf(file,".field public static %s F = %f\n", $2, (double)$4);
 					else if(strcmp($1, "bool")==0)
 						fprintf(file,".field public static %s Z = %d\n", $2, (int)$4);	
 				}
 				else
 				{
-					insert_symbol(symbol_num, $2, "variable", $1, scope, NULL, 0, reg_num);
-					if(strcmp($1,"int")==0)
-					{	
-						fprintf(file,"\tldc %d\n"
-									"\tistore %d\n", (int)$4, reg_num);
+					if(func_flag==1)
+					{
+						insert_symbol(symbol_num, $2, "variable", $1, scope, NULL, 0, funcReg_num);
+						if(strcmp($1,"int")==0)
+						{	
+							fprintf(file,"\tldc %d\n"
+										"\tistore %d\n", (int)$4, funcReg_num);
+						}
+						else if(strcmp($1, "float")==0)
+						{	
+							fprintf(file,"\tldc %f\n"
+										"\tfstore %d\n", (double)$4, funcReg_num);
+						}
+						else if(strcmp($1, "bool")==0)
+						{	
+							fprintf(file,"\tldc %d\n"
+										"\tistore %d\n", (int)$4, funcReg_num);
+						}
+						++funcReg_num;
 					}
-					else if(strcmp($1, "float")==0)
+					else
 					{	
-						fprintf(file,"\tldc %f\n"
-									"\tfstore %d\n", (float)$4, reg_num);
+						insert_symbol(symbol_num, $2, "variable", $1, scope, NULL, 0, reg_num);
+						if(strcmp($1,"int")==0)
+						{	
+							fprintf(file,"\tldc %d\n"
+										"\tistore %d\n", (int)$4, reg_num);
+						}
+						else if(strcmp($1, "float")==0)
+						{	
+							fprintf(file,"\tldc %f\n"
+										"\tfstore %d\n", (double)$4, reg_num);
+						}
+						else if(strcmp($1, "bool")==0)
+						{	
+							fprintf(file,"\tldc %d\n"
+										"\tistore %d\n", (int)$4, reg_num);
+						}
+						++reg_num;
 					}
-					else if(strcmp($1, "bool")==0)
-					{	
-						fprintf(file,"\tldc %d\n"
-									"\tistore %d\n", (int)$4, reg_num);
-					}
-					reg_num++;
+					
 				}
-				symbol_num++;
+				++symbol_num;
 			}
 			else 
 			{
@@ -193,7 +239,6 @@ declaration
 			{
 				if(scope==0)
 				{
-					global_num++;
 					insert_symbol(symbol_num, $2, "variable", $1, scope, NULL, 0, -1);
 					if(strcmp($1,"string")==0)
 					{	
@@ -202,15 +247,28 @@ declaration
 				}
 				else
 				{
-					insert_symbol(symbol_num, $2, "variable", $1, scope, NULL, 0, reg_num);
-					if(strcmp($1,"string")==0)
-					{	
-						fprintf(file,"\tldc \"%s\"\n"
-									"\tistore %d\n", $4, reg_num);	
+					if(func_flag == 1)
+					{
+						insert_symbol(symbol_num, $2, "variable", $1, scope, NULL, 0, funcReg_num);
+						if(strcmp($1,"string")==0)
+						{	
+							fprintf(file,"\tldc \"%s\"\n"
+									"\tastore %d\n", $4, funcReg_num);	
+						}
+						++funcReg_num;
 					}
-					reg_num++;
+					else
+					{
+						insert_symbol(symbol_num, $2, "variable", $1, scope, NULL, 0, reg_num);
+						if(strcmp($1,"string")==0)
+						{	
+							fprintf(file,"\tldc \"%s\"\n"
+									"\tastore %d\n", $4, reg_num);	
+						}
+						++reg_num;
+					}
 				}
-				symbol_num++;
+				++symbol_num;
 			}
 			else 
 			{
@@ -223,12 +281,11 @@ declaration
 			{
 				if(scope==0)
 				{
-					global_num++;
 					insert_symbol(symbol_num, $2, "variable", $1, scope, NULL, 0, -1);
 					if(strcmp($1,"int")==0)
 						fprintf(file,".field public static %s I = %d\n", $2, (int)0);
 					else if(strcmp($1, "float")==0)
-						fprintf(file,".field public static %s F = %f\n", $2, (float)0);
+						fprintf(file,".field public static %s F\n", $2);
 					else if(strcmp($1, "bool")==0)
 						fprintf(file,".field public static %s Z = %d\n", $2, (int)0);
 					else if(strcmp($1, "void")==0)
@@ -239,37 +296,66 @@ declaration
 				}
 				else
 				{
-					insert_symbol(symbol_num, $2, "variable", $1, scope, NULL, 0, reg_num);
-					if(strcmp($1,"int")==0)
-					{	
-						fprintf(file,"\tldc %d\n"
-									"\tistore %d\n", (int)0, reg_num);
-					}
-					else if(strcmp($1, "float")==0)
-					{	
-						fprintf(file,"\tldc %f\n"
-									"\tfstore %d\n", (float)0, reg_num);
-					}
-					else if(strcmp($1, "bool")==0)
+					if(func_flag == 1)
 					{
-						fprintf(file,"\tldc %d\n"
-									"\tistore %d\n", (int)0, reg_num);
+						insert_symbol(symbol_num, $2, "variable", $1, scope, NULL, 0, funcReg_num);
+						if(strcmp($1,"int")==0)
+						{	
+							fprintf(file,"\tldc %d\n"
+										"\tistore %d\n", (int)0, funcReg_num);
+						}
+						else if(strcmp($1, "float")==0)
+						{	
+							fprintf(file,"\tldc %f\n"
+										"\tfstore %d\n", (double)0, funcReg_num);
+						}
+						else if(strcmp($1, "bool")==0)
+						{
+							fprintf(file,"\tldc %d\n"
+										"\tistore %d\n", (int)0, funcReg_num);
+						}
+						else if(strcmp($1, "string")==0)
+						{	
+							fprintf(file,"\tldc \"\"\n"
+										"\tastore %d\n", funcReg_num);
+						}
+						++funcReg_num;
 					}
-					else if(strcmp($1, "string")==0)
-					{	
-						fprintf(file,"\tldc \"\"\n"
-									"\tistore %d\n", reg_num);
+					else
+					{
+						insert_symbol(symbol_num, $2, "variable", $1, scope, NULL, 0, reg_num);
+						if(strcmp($1,"int")==0)
+						{	
+							fprintf(file,"\tldc %d\n"
+										"\tistore %d\n", (int)0, reg_num);
+						}
+						else if(strcmp($1, "float")==0)
+						{	
+							fprintf(file,"\tldc %f\n"
+										"\tfstore %d\n", (double)0, reg_num);
+						}
+						else if(strcmp($1, "bool")==0)
+						{
+							fprintf(file,"\tldc %d\n"
+										"\tistore %d\n", (int)0, reg_num);
+						}
+						else if(strcmp($1, "string")==0)
+						{	
+							fprintf(file,"\tldc \"\"\n"
+										"\tastore %d\n", reg_num);
+						}
+						++reg_num;
 					}
-					reg_num++;
 				}
-				symbol_num++;
+				++symbol_num;
 			}
 			else
 			{
 				set_err(2,"Redeclared variable",$2);
 			}
 		}
-| type ID LB parameter_list RB SEMICOLON
+		
+	| type ID LB parameter_list RB SEMICOLON
 		{			
 			int lookup_result = lookup_symbol($2, scope, symbol_num);
 			if(lookup_result == -2 || lookup_result >= 0)
@@ -279,7 +365,7 @@ declaration
 
 			/* Dont't insert parameters to table when function declaration */
 			int i;
-			for(i=0; i<param_num; i++)
+			for(i=0; i<param_num; ++i)
 			{
 				memset(symbol_table[param_index[i]], 0, sizeof(struct symbol));
 				symbol_table[param_index[i]]->scope_level = -1;
@@ -291,13 +377,13 @@ declaration
 			/* Insert funcion */
 			if(lookup_result != -2 && lookup_result < 0)
 			{
-				func_num++;
 				char temp[256] = {0};
 				strncpy(temp,params,strlen(params)-2);
 				insert_symbol(symbol_num, $2, "function", $1, scope, temp, 1, -1);
-				symbol_num++;
+				++symbol_num;
 			}
 			memset(params,0,sizeof(params));
+			memset(param_index,0,sizeof(param_index));
 		}
 	| type ID LB RB SEMICOLON
 		{			
@@ -308,9 +394,8 @@ declaration
 			}
 			else
 			{
-				func_num++;
 				insert_symbol(symbol_num, $2, "function", $1, scope, NULL, 1, -1);
-				symbol_num++;
+				++symbol_num;
 			}
 		}
 
@@ -322,57 +407,65 @@ expression_stat
 ;
 
 expr
-	: assignment_expr
+	: assignment_expr	
 	| expr COMMA assignment_expr
 ;
 
 assignment_expr
 	: conditional_expr	{ $$ = $1; }
-	| ID assignment_operator assignment_expr
+	| ID ASGN assignment_expr
 		{
-			if(lookup_symbol($1, scope, symbol_num) == -1)
+			int lookup_result = lookup_symbol($1, scope, symbol_num);
+			if(lookup_result == -1)
 			{
 				set_err(2,"Undeclared variable",$1);
 			}
 			else
 			{
-				
 				int reg = get_register(symbol_table, $1, scope, symbol_num);
 				if(reg==-1)		// global variable
 				{
-					/*fprintf(file, "\tgetstatic %s/%s ", CLASS_NAME, $1);
-					printf("----cmp = %d\n",reg);
+					fprintf(file, "\tputstatic %s/%s ", CLASS_NAME, $1);
 					char type[7] = {0};
 					strcpy(type, get_type($1, scope, symbol_num));
 					if(strcmp(type,"int")==0)
 					{
 						fprintf(file, "I\n");
-						op_type = 'I';
 					}
 					else if(strcmp(type,"float")==0)
 					{
 						fprintf(file, "F\n");
-						op_type = 'F';
 					}
 					else if(strcmp(type,"bool")==0)
 					{
 						fprintf(file, "Z\n");
-						op_type = 'I';
 					}
 					else if(strcmp(type, "string")==0)
 					{
 						fprintf(file, "Ljava/lang/String;\n");		
-					}*/
+					}
 				}
 				else	// local variable
 				{
 					if(strcmp(reg_type[reg],"int")==0)
 					{
-						fprintf(file, "\tistore %d\n",reg);
+						if(op_type == 'I')
+							fprintf(file, "\tistore %d\n",reg);
+						else if(op_type == 'F')
+						{
+							fprintf(file, "\tf2i\n"
+										"\tistore %d\n",reg);
+						}	
 					}
 					else if(strcmp(reg_type[reg],"float")==0)
 					{
-						fprintf(file, "\tfstore %d\n",reg);
+						if(op_type == 'F')
+							fprintf(file, "\tfstore %d\n",reg);
+						else if(op_type == 'I')
+						{
+							fprintf(file, "\ti2f\n"
+										"\tfstore %d\n",reg);
+						}
 					}
 					else if(strcmp(reg_type[reg],"bool")==0)
 					{	
@@ -380,20 +473,165 @@ assignment_expr
 					}
 					else if(strcmp(reg_type[reg], "string")==0)
 					{	
-						fprintf(file, "\tistore %d\n",reg);
+						fprintf(file, "\tastore %d\n",reg);
 					}
+				}		
+				op_type = 0;
+			}
+		}
+	| opassign_operand opassign_operator assignment_expr
+		{
+			if(op_type == 'I')
+			{	
+				if(strcmp($2, "+=")==0)
+					fprintf(file, "\tiadd\n");
+				else if(strcmp($2, "-=")==0)
+					fprintf(file, "\tisub\n");
+				else if(strcmp($2, "*=")==0)
+					fprintf(file, "\timul\n");
+				else if(strcmp($2, "/=")==0)
+					fprintf(file, "\tidiv\n");
+				else if(strcmp($2, "%=")==0)
+					fprintf(file, "\tirem\n");
+			}
+			else if(op_type == 'F')
+			{
+				if(strcmp($2, "+=")==0)
+					fprintf(file, "\tfadd\n");
+				else if(strcmp($2, "-=")==0)
+					fprintf(file, "\tfsub\n");
+				else if(strcmp($2, "*=")==0)
+					fprintf(file, "\tfmul\n");
+				else if(strcmp($2, "/=")==0)
+					fprintf(file, "\tfdiv\n");
+			}
+				
+			int reg = get_register(symbol_table, $1, scope, symbol_num);
+			if(reg==-1)		// global variable
+			{
+				fprintf(file, "\tputstatic %s/%s ", CLASS_NAME, $1);
+				char type[7] = {0};
+				strcpy(type, get_type($1, scope, symbol_num));
+				if(strcmp(type,"int")==0)
+				{
+					fprintf(file, "I\n");
+				}
+				else if(strcmp(type,"float")==0)
+				{
+					fprintf(file, "F\n");
+				}
+				else if(strcmp(type,"bool")==0)
+				{
+					fprintf(file, "Z\n");
+				}
+				else if(strcmp(type, "string")==0)
+				{
+					fprintf(file, "Ljava/lang/String;\n");		
 				}
 			}
+			else	// local variable
+			{
+				if(strcmp(reg_type[reg],"int")==0)
+				{
+					if(op_type == 'I')
+						fprintf(file, "\tistore %d\n",reg);
+					else if(op_type == 'F')
+					{
+						fprintf(file, "\tf2i\n"
+									"\tistore %d\n",reg);
+					}
+				}
+				else if(strcmp(reg_type[reg],"float")==0)
+				{
+					if(op_type == 'F')
+						fprintf(file, "\tfstore %d\n",reg);
+					else if(op_type == 'I')
+					{
+						fprintf(file, "\ti2f\n"
+									"\tfstore %d\n",reg);
+					}
+				}
+				else if(strcmp(reg_type[reg],"bool")==0)
+				{	
+					fprintf(file, "\tistore %d\n",reg);	
+				}
+				else if(strcmp(reg_type[reg], "string")==0)
+				{	
+					fprintf(file, "\tastore %d\n",reg);
+				}
+			}
+			op_type = 0;
 		}
 ;
 
-assignment_operator
-	: ASGN
-	| MULASGN
-	| DIVASGN
-	| MODASGN
-	| ADDASGN
-	| SUBASGN
+opassign_operand
+	: ID
+		{
+			strcpy($$, $1);
+			int lookup_result = lookup_symbol($1, scope, symbol_num);
+			if(lookup_result == -1)
+			{
+				set_err(2,"Undeclared variable",$1);
+			}
+			else
+			{
+				int reg = get_register(symbol_table, $1, scope, symbol_num);
+				if(reg==-1)		// global variable
+				{	
+					char type[7] = {0};
+					strcpy(type, get_type($1, scope, symbol_num));
+					if(strcmp(type,"int")==0)
+					{
+						fprintf(file, "\tgetstatic %s/%s I\n", CLASS_NAME, $1);
+						op_type = 'I';
+					}
+					else if(strcmp(type,"float")==0)
+					{	
+							fprintf(file, "\tgetstatic %s/%s F\n", CLASS_NAME, $1);
+							op_type = 'F';				
+					}
+					else if(strcmp(type,"bool")==0)
+					{
+						fprintf(file, "\tgetstatic %s/%s Z\n", CLASS_NAME, $1);
+						op_type = 'I';
+					}
+					else if(strcmp(type, "string")==0)
+					{
+						fprintf(file, "\tgetstatic %s/%s Ljava/lang/String;\n", CLASS_NAME, $1);		
+					}
+				}
+				else	// local variable
+				{
+					if(strcmp(reg_type[reg],"int")==0)
+					{	
+						fprintf(file, "\tiload %d\n",reg);
+						op_type = 'I';
+					}
+					else if(strcmp(reg_type[reg],"float")==0)
+					{
+						fprintf(file, "\tfload %d\n",reg);
+						op_type = 'F';
+					}
+					else if(strcmp(reg_type[reg],"bool")==0)
+					{	
+						fprintf(file, "\tiload %d\n",reg);
+						op_type = 'I';
+					}
+					else if(strcmp(reg_type[reg], "string")==0)
+					{	
+						fprintf(file, "\taload %d\n",reg);
+					}
+				}
+			}
+		}	
+;
+
+opassign_operator
+	: MULASGN	{ strcpy($$, "*="); }
+	| DIVASGN	{ strcpy($$, "/="); }
+	| MODASGN	{ strcpy($$, "%="); }
+	| ADDASGN	{ strcpy($$,"+="); }
+	| SUBASGN	{ strcpy($$, "-="); }
 ;
 
 conditional_expr
@@ -412,20 +650,166 @@ logical_and_expr
 
 relational_expr
 	: additive_expr	{ $$ = $1; }
-	| relational_expr EQ additive_expr
-	| relational_expr NE additive_expr
-	| relational_expr LT additive_expr
-	| relational_expr MT additive_expr
-	| relational_expr LTE additive_expr
-	| relational_expr MTE additive_expr
+	| relational_operand EQ relational_operand
+		{
+			if(op_type == 'I')
+				fprintf(file, "\tisub\n");
+			else if(op_type == 'F')
+				fprintf(file, "\tfsub\n");
+			relation_flag = 'E';
+		}
+	| relational_operand NE relational_operand
+		{
+			if(op_type == 'I')
+				fprintf(file, "\tisub\n");
+			else if(op_type == 'F')
+				fprintf(file, "\tfsub\n");
+			relation_flag = 'N';
+		}
+	| relational_operand LT relational_operand
+		{
+			if(op_type == 'I')
+				fprintf(file, "\tisub\n");
+			else if(op_type == 'F')
+				fprintf(file, "\tfsub\n");
+			relation_flag = 'l';
+		}
+	| relational_operand MT relational_operand
+		{
+			if(op_type == 'I')
+				fprintf(file, "\tisub\n");
+			else if(op_type == 'F')
+				fprintf(file, "\tfsub\n");
+			relation_flag = 'm';
+		}
+	| relational_operand LTE relational_operand
+		{
+			if(op_type == 'I')
+				fprintf(file, "\tisub\n");
+			else if(op_type == 'F')
+				fprintf(file, "\tfsub\n");
+			relation_flag = 'L';
+		}
+	| relational_operand MTE relational_operand
+		{
+			if(op_type == 'I')
+				fprintf(file, "\tisub\n");
+			else if(op_type == 'F')
+				fprintf(file, "\tfsub\n");
+			relation_flag = 'M';
+		}
+;
+
+relational_operand
+	: I_CONST
+		{
+			if(end_flag[scope-1]==1)
+			{
+				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, group[scope-1]);
+				fprintf(file, "END%d_%d_%d:\n", scope-1, group[scope-1], branch[scope-1]);
+				end_flag[scope-1] = 0; 
+			}
+			fprintf(file, "\tldc %d\n", $1);
+			op_type = 'I';
+		}
+	| F_CONST
+		{
+			if(end_flag[scope-1]==1)
+			{
+				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, group[scope-1]);
+				fprintf(file, "END%d_%d_%d:\n", scope-1, group[scope-1], branch[scope-1]);
+				end_flag[scope-1] = 0; 
+			}
+			fprintf(file, "\tldc %f\n", $1);
+			op_type = 'F';
+		}
+	| TRUE
+		{
+			if(end_flag[scope-1]==1)
+			{
+				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, group[scope-1]);
+				fprintf(file, "END%d_%d_%d:\n", scope-1, group[scope-1], branch[scope-1]);
+				end_flag[scope-1] = 0; 
+			}
+			fprintf(file, "\tldc 1\n");
+			op_type = 'I';
+		}
+	| FALSE
+		{
+			if(end_flag[scope-1]==1)
+			{
+				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, group[scope-1]);
+				fprintf(file, "END%d_%d_%d:\n", scope-1, group[scope-1], branch[scope-1]);
+				end_flag[scope-1] = 0; 
+			}
+			fprintf(file, "\tldc 0\n");
+			op_type = 'I';
+		}
+	| ID
+		{
+			if(end_flag[scope-1]==1)
+			{
+				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, group[scope-1]);
+				fprintf(file, "END%d_%d_%d:\n", scope-1, group[scope-1], branch[scope-1]);
+				end_flag[scope-1] = 0; 
+			}
+
+			int lookup_result = lookup_symbol($1, scope, symbol_num);
+			if(lookup_result == -1)
+			{
+				set_err(2,"Undeclared variable",$1);
+			}
+			else
+			{
+				int reg = get_register(symbol_table, $1, scope, symbol_num);
+				if(reg==-1)		// global variable
+				{	
+					char type[7] = {0};
+					strcpy(type, get_type($1, scope, symbol_num));
+					if(strcmp(type,"int")==0)
+					{
+						fprintf(file, "\tgetstatic %s/%s I\n", CLASS_NAME, $1);
+						op_type = 'I';
+					}
+					else if(strcmp(type,"float")==0)
+					{	
+						fprintf(file, "\tgetstatic %s/%s F\n", CLASS_NAME, $1);				
+						op_type = 'F';
+					}
+					else if(strcmp(type,"bool")==0)
+					{
+						fprintf(file, "\tgetstatic %s/%s Z\n", CLASS_NAME, $1);
+						op_type = 'I';
+					}
+				}
+				else	// local variable
+				{
+					if(strcmp(reg_type[reg],"int")==0)
+					{	
+						fprintf(file, "\tiload %d\n",reg);
+						op_type = 'I';
+					}
+					else if(strcmp(reg_type[reg],"float")==0)
+					{
+						fprintf(file, "\tfload %d\n",reg);
+						op_type = 'F';
+					}
+					else if(strcmp(reg_type[reg],"bool")==0)
+					{	
+						fprintf(file, "\tiload %d\n",reg);
+						op_type = 'I';
+					}
+				}
+			}
+		}
 ;
 
 additive_expr
-	: multiplicative_expr	{ $$ = $1; printf("----------add_expr = %f\n",$$);}
+	: multiplicative_expr	{ $$ = $1; }//printf("----------add_expr = %f\n",$$)
 	| additive_expr ADD multiplicative_expr
 		{
 			$$ = $1 + $3;
-			printf("------------%f\n", $$);
+			//printf("------------%f\n", $$);
 			switch(op_type)
 			{
 				case 'I':
@@ -460,7 +844,7 @@ additive_expr
 ;
 
 multiplicative_expr
-	: cast_expr	{ $$ = $1; printf("----------mul_expr = %f\n",$$);}
+	: cast_expr	{ $$ = $1; }//printf("----------mul_expr = %f\n",$$)
 	| multiplicative_expr MUL cast_expr
 		{
 			$$ = $1 * $3;
@@ -515,12 +899,12 @@ multiplicative_expr
 ;
 
 cast_expr
-	: unary_expr	{ $$ = $1; printf("----------cast_expr = %f\n",$$);}
+	: unary_expr	{ $$ = $1; } //printf("----------cast_expr = %f\n",$$)
 	| LB type RB cast_expr
 ;
 
 unary_expr
-	: postfix_expr	{ $$ = $1; printf("----------unary_expr = %f\n",$$);}
+	: postfix_expr	{ $$ = $1; }//printf("----------unary_expr = %f\n",$$)
 	| unary_operator cast_expr
 ;
 
@@ -531,20 +915,106 @@ unary_operator
 ;
 
 postfix_expr
-	: primary_expr	{ $$ = $1; printf("----------postfix_expr = %f\n",$$);}
+	: primary_expr	{ $$ = $1; }//printf("----------postfix_expr = %f\n",$$)
 	| ID LB RB
 		{
-			if(lookup_symbol($1, scope, symbol_num) == -1)
+			int lookup_result = lookup_symbol($1, scope, symbol_num);
+			if(lookup_result == -1)
 			{	
 				set_err(2,"Undeclared function",$1);
 			}
-
+			else
+			{
+				fprintf(file, "\tinvokestatic %s/%s()", CLASS_NAME, $1);
+				char type[7] = {0};
+				strcpy(type, get_type($1,scope,symbol_num));
+				if(strcmp(type, "int")==0)
+				{
+					fprintf(file, "I\n");
+				}
+				else if(strcmp(type, "float")==0)
+				{
+					fprintf(file, "F\n");
+				}
+				else if(strcmp(type, "bool")==0)
+				{
+					fprintf(file, "Z\n");
+				}
+				else if(strcmp(type, "void")==0)
+				{
+					fprintf(file, "V\n");
+				}
+				else if(strcmp(type, "string")==0)
+				{
+					fprintf(file, "Ljava/lang/String;\n");
+				}
+			}
 		}
 	| ID LB argument_list RB
 		{
-			if(lookup_symbol($1, scope, symbol_num) == -1)
-			{	
+			int lookup_result = lookup_symbol($1, scope, symbol_num);
+			if(lookup_result == -1)
+			{
 				set_err(2,"Undeclared function",$1);
+			}
+			else
+			{
+				fprintf(file, "\tinvokestatic %s/%s(", CLASS_NAME, $1);
+				
+				char temp[256] = {0};
+				strcpy(temp, get_attribute($1, scope, symbol_num));
+				char *arg_type;
+				arg_type = strtok(temp,", ");
+				while(arg_type != NULL)
+				{
+					if(strcmp(arg_type, "int")==0)
+					{
+						fprintf(file, "I");
+					}
+					else if(strcmp(arg_type, "float")==0)
+					{
+						fprintf(file, "F");
+					}
+					else if(strcmp(arg_type, "bool")==0)
+					{
+						fprintf(file, "Z");
+					}
+					else if(strcmp(arg_type, "void")==0)
+					{
+						fprintf(file, "V");
+					}
+					else if(strcmp(arg_type, "string")==0)
+					{
+						fprintf(file, "Ljava/lang/String;");
+					}
+
+					arg_type = strtok(NULL, ", ");
+				}
+				fprintf(file, ")");
+
+				char type[7] = {0};
+				strcpy(type, get_type($1,scope,symbol_num));
+				if(strcmp(type, "int")==0)
+				{
+					fprintf(file, "I\n");
+				}
+				else if(strcmp(type, "float")==0)
+				{
+					fprintf(file, "F\n");
+				}
+				else if(strcmp(type, "bool")==0)
+				{
+					fprintf(file, "Z\n");
+				}
+				else if(strcmp(type, "void")==0)
+				{
+					fprintf(file, "V\n");
+				}
+				else if(strcmp(type, "string")==0)
+				{
+					fprintf(file, "Ljava/lang/String;\n");
+				}
+
 			}
 
 		}	
@@ -554,54 +1024,136 @@ postfix_expr
 ;
 
 primary_expr
-	: val	{ $$ = $1;  printf("----------primary_expr = %f\n",$$);}
+	: val	{ $$ = $1;  }//printf("----------primary_expr = %f\n",$$)
 	| LB expr RB
 ;
 
 compound_stat
 	: IF LB expr RB LCB
 		{
-			scope++;
+			++scope;
+			++group[scope-1];
+			branch[scope-1] = 1;
+			end_flag[scope-1] = 1;
+			exit_flag[scope-1] = 1;
+			switch(relation_flag)
+			{
+				case 'E':
+				{
+					fprintf(file, "\tifeq LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					break;
+				}
+				case 'N':
+				{
+					fprintf(file, "\tifne LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					break;
+				}
+				case 'l':
+				{
+					fprintf(file, "\tiflt LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					break;
+				}
+				case 'm':
+				{
+					fprintf(file, "\tifgt LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					break;
+				}
+				case 'L':
+				{
+					fprintf(file, "\tifle LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					break;
+				}
+				case 'M':
+				{
+					fprintf(file, "\tifge LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					break;
+				}
+			}
+			fprintf(file, "\tgoto END%d_%d_%d\n", scope-1, group[scope-1],branch[scope-1]);
+			fprintf(file, "LABEL%d_%d_%d:\n", scope-1, group[scope-1], branch[scope-1]);
 		}
 	| RCB ELSE IF LB expr RB LCB
 		{
 			dump = 1;
 			add_scope = 1;
+			
+			++branch[scope-1];
+			end_flag[scope-1] = 1;
+			switch(relation_flag)
+			{
+				case 'E':
+				{
+					fprintf(file, "\tifeq LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					break;
+				}
+				case 'N':
+				{
+					fprintf(file, "\tifne LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					break;
+				}
+				case 'l':
+				{
+					fprintf(file, "\tiflt LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					break;
+				}
+				case 'm':
+				{
+					fprintf(file, "\tifgt LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					break;
+				}
+				case 'L':
+				{
+					fprintf(file, "\tifle LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					break;
+				}
+				case 'M':
+				{
+					fprintf(file, "\tifge LABEL%d_%d_%d\n", scope-1, group[scope-1], branch[scope-1]);
+					break;
+				}
+			}
+			fprintf(file, "\tgoto END%d_%d_%d\n", scope-1, group[scope-1],branch[scope-1]);
+			fprintf(file, "LABEL%d_%d_%d:\n", scope-1, group[scope-1], branch[scope-1]);
+
 		}
 	| RCB ELSE LCB
 		{
 			dump = 1;
 			add_scope = 1;
+			
+			end_flag[scope-1] = 0;
+			fprintf(file, "\tgoto  EXIT%d_%d\n", scope-1, group[scope-1]);
+			fprintf(file, "END%d_%d_%d:\n", scope-1, group[scope-1], branch[scope-1]);
 		}
 	| WHILE LB expr RB LCB
 		{
-			scope++;
+			++scope;
 		}
 	| type ID LB parameter_list RB LCB
 		{
 			int lookup_result = lookup_symbol($2, scope, symbol_num);
 			if(lookup_result == -1 || lookup_result == -3)	// If function undeclared, insert it and its parameters
 			{
-				func_num++;
+				func_flag = 1;
 				char temp[256]= {0};
 				strncpy(temp,params,strlen(params)-2);
-				insert_symbol(symbol_num, $2, "function", $1, scope, temp,0, -1);
-				symbol_num++;
+				insert_symbol(symbol_num, $2, "function", $1, scope, temp, 0, -1);
+				++symbol_num;
 				memset(params,0,sizeof(params));
-
+				
 				fprintf(file, ".method public static %s(",$2);
 				int i = 0;
-				for(i=0; i<param_num;i++)
+				for(i=0; i<param_num;++i)
 				{
-					if(param_type[i]=='I')
+					if(funcReg_type[i]=='I')
 						fprintf(file, "I");
-					else if(param_type[i]=='F')
+					else if(funcReg_type[i]=='F')
 						fprintf(file, "F");
-					else if(param_type[i]=='Z')
+					else if(funcReg_type[i]=='Z')
 						fprintf(file, "Z");
-					else if(param_type[i]=='s')
+					else if(funcReg_type[i]=='s')
 						fprintf(file, "Ljava/lang/String;");
-					else if(param_type[i]=='V')
+					else if(funcReg_type[i]=='V')
 						fprintf(file, "V");
 				}
 				if(strcmp($1,"int")==0)
@@ -630,11 +1182,27 @@ compound_stat
 					fprintf(file, ")V\n");
 				}
 				fprintf(file, ".limit stack 50\n"
-								".limit locals 50\n");
+									".limit locals 50\n");
+
+				/*for(i=0; i<param_num;i++)
+				{
+					if(funcReg_type[i]=='I')
+						fprintf(file, "\tiload %d\n", i);
+					else if(funcReg_type[i]=='F')
+						fprintf(file, "\tfload %d\n", i);
+					else if(funcReg_type[i]=='Z')
+						fprintf(file, "\tiload %d\n", i);
+					else if(funcReg_type[i]=='s')
+						fprintf(file, "\taload %d\n", i);
+				}*/
+
 				param_num = 0;
+				funcReg_num = 0;
+				memset(funcReg_type, 0, sizeof(funcReg_type));
 			}
 			else if(lookup_result >= 0)	// If function forward declared, insert its attribute
 			{
+				func_flag = 1;
 				if(symbol_table[lookup_result]->param==NULL)
 				{
 					char temp[256] = {0};
@@ -642,29 +1210,122 @@ compound_stat
 					strcpy(symbol_table[lookup_result]->param, temp);
 					memset(params,0,sizeof(params));
 				}
+
+				fprintf(file, ".method public static %s(",$2);
+				int i = 0;
+				for(i=0; i<param_num;++i)
+				{
+					if(funcReg_type[i]=='I')
+						fprintf(file, "I");
+					else if(funcReg_type[i]=='F')
+						fprintf(file, "F");
+					else if(funcReg_type[i]=='Z')
+						fprintf(file, "Z");
+					else if(funcReg_type[i]=='s')
+						fprintf(file, "Ljava/lang/String;");
+					else if(funcReg_type[i]=='V')
+						fprintf(file, "V");
+				}
+				if(strcmp($1,"int")==0)
+				{
+					return_type = 'I';
+					fprintf(file, ")I\n");
+				}
+				else if(strcmp($1,"float")==0)
+				{
+					return_type = 'F';
+					fprintf(file, ")F\n");
+				}
+				else if(strcmp($1,"bool")==0)
+				{
+					return_type = 'Z';
+					fprintf(file, ")Z\n");
+				}
+				else if(strcmp($1, "string")==0)
+				{
+					return_type = 's';
+					fprintf(file, ")Ljava/lang/String;\n");
+				}
+				else if(strcmp($1, "void")==0)
+				{
+					return_type = 'V';
+					fprintf(file, ")V\n");
+				}
+				fprintf(file, ".limit stack 50\n"
+									".limit locals 50\n");
+
+				/*for(i=0; i<param_num;i++)
+				{
+					if(funcReg_type[i]=='I')
+						fprintf(file, "\tiload %d\n", i);
+					else if(funcReg_type[i]=='F')
+						fprintf(file, "\tfload %d\n", i);
+					else if(funcReg_type[i]=='Z')
+						fprintf(file, "\tiload %d\n", i);
+					else if(funcReg_type[i]=='s')
+						fprintf(file, "\taload %d\n", i);
+				}*/
+
+				param_num = 0;
+				funcReg_num = 0;
+				memset(funcReg_type, 0, sizeof(funcReg_type));
 			}
 			else
 			{
 				set_err(2,"Redeclared function",$2);
 			}
 	
-			scope++;
+			++scope;
 	}
 	| type ID LB RB LCB
 		{
 			int lookup_result = lookup_symbol($2, scope, symbol_num); 
 			if(lookup_result == -1 || lookup_result == -3)
 			{
-				func_num++;
+				func_flag = 1;
 				insert_symbol(symbol_num, $2, "function", $1, scope, NULL, 0, -1);
-				symbol_num++;
+				++symbol_num;
 
 				if(strcmp($2,"main")==0)
 				{
 					fprintf(file, ".method public static main([Ljava/lang/String;)V\n"
 									".limit stack 50\n"
+									".limit locals 50\n");	
+				}
+				else
+				{
+					fprintf(file, ".method public static %s()", $2);
+					if(strcmp($1,"int")==0)
+					{
+						return_type = 'I';
+						fprintf(file, ")I\n");
+					}
+					else if(strcmp($1,"float")==0)
+					{
+						return_type = 'F';
+						fprintf(file, ")F\n");
+					}
+					else if(strcmp($1,"bool")==0)
+					{
+						return_type = 'Z';
+						fprintf(file, ")Z\n");
+					}
+					else if(strcmp($1, "string")==0)
+					{
+						return_type = 's';
+						fprintf(file, ")Ljava/lang/String;\n");
+					}
+					else if(strcmp($1, "void")==0)
+					{
+						return_type = 'V';
+						fprintf(file, ")V\n");
+					}
+					fprintf(file, ".limit stack 50\n"
 									".limit locals 50\n");
 				}
+				param_num = 0;
+				funcReg_num = 0;
+				memset(funcReg_type, 0, sizeof(funcReg_type));
 			}
 			
 			else if(lookup_result == -2)
@@ -672,11 +1333,24 @@ compound_stat
 				set_err(2,"Redeclared function",$2);
 			}
 
-			scope++;
+			++scope;
 		}
 	| RCB
 		{	
 			dump = 1;	// flag to indicate to dump table when meet NEWLINE later
+			if(end_flag[scope-1] == 1)
+			{
+				printf("XXXXXXXXXXXXXXXXXXXX\n");
+				//fprintf(file, "\tgoto EXIT%d_%d\n", scope, group[scope]);
+				fprintf(file, "END%d_%d_%d:\n", scope-1, group[scope-1], branch[scope-1]);
+				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, group[scope-1]);
+				end_flag[scope-1] = 0; 
+			}
+			if(exit_flag[scope-1] == 1)
+			{
+				fprintf(file, "EXIT%d_%d:\n", scope-1, group[scope-1]);
+				exit_flag[scope-1] = 0;
+			}
 		}
 
 ;
@@ -688,6 +1362,7 @@ jump_stat
 		{
 			fprintf(file, "\treturn\n"
 							".end method\n");
+			return_type = 0;
 		}
 	| RET expr SEMICOLON
 		{
@@ -708,26 +1383,116 @@ jump_stat
 			}
 			else if(return_type == 's')
 			{	
-				//fprintf(file, "\tireturn\n"
-				//			".end method\n");
+				fprintf(file, "\tareturn\n"
+							".end method\n");
 			}
+			return_type = 0;
 		}
 ;
 
 print_func
-	: PRINT LB STR_CONST RB
+	: PRINT LB I_CONST RB
+		{
+			fprintf(file, "\tldc %d\n"
+						"\tgetstatic java/lang/System/out Ljava/io/PrintStream;\n"
+						"\tswap\n"
+						"\tinvokevirtual java/io/PrintStream/println(I)V\n", $3);
+		}
+	| PRINT LB F_CONST RB
+		{
+			fprintf(file, "\tldc %f\n"
+						"\tgetstatic java/lang/System/out Ljava/io/PrintStream;\n"
+						"\tswap\n"
+						"\tinvokevirtual java/io/PrintStream/println(F)V\n", $3);
+		}
+	| PRINT LB STR_CONST RB
+		{
+			fprintf(file, "\tldc \"%s\"\n"
+						"\tgetstatic java/lang/System/out Ljava/io/PrintStream;\n"
+						"\tswap\n"
+						"\tinvokevirtual java/io/PrintStream/println(Ljava/lang/String;)V\n", $3);
+		}
 	| PRINT LB ID RB
 		{
 			if(lookup_symbol($3, scope, symbol_num) == -1)
 			{
 				set_err(2,"Undeclared variable",$3);
 			}
+			else
+			{
+				int reg = get_register(symbol_table, $3, scope, symbol_num);
+				if(reg==-1)		// global variable
+				{
+					char type[7] = {0};
+					strcpy(type, get_type($3, scope, symbol_num));
+					if(strcmp(type,"int")==0)
+					{
+						fprintf(file, "\tgetstatic compiler_hw3/%s I\n"
+									"\tgetstatic java/lang/System/out Ljava/io/PrintStream;\n"
+									"\tswap\n"
+									"\tinvokevirtual java/io/PrintStream/println(I)V\n", $3);
+					}
+					else if(strcmp(type,"float")==0)
+					{
+						fprintf(file, "\tgetstatic compiler_hw3/%s F\n"
+									"\tgetstatic java/lang/System/out Ljava/io/PrintStream;\n"
+									"\tswap\n"
+									"\tinvokevirtual java/io/PrintStream/println(F)V\n", $3);				
+					}
+					else if(strcmp(type,"bool")==0)
+					{
+						fprintf(file, "\tgetstatic compiler_hw3/%s I\n"
+									"\tgetstatic java/lang/System/out Ljava/io/PrintStream;\n"
+									"\tswap\n"
+									"\tinvokevirtual java/io/PrintStream/println(I)V\n", $3);
+					}
+					else if(strcmp(type, "string")==0)
+					{
+						fprintf(file, "\tgetstatic compiler_hw3/%s Ljava/lang/String;\n"
+									"\tgetstatic java/lang/System/out Ljava/io/PrintStream;\n"
+									"\tswap\n"
+									"\tinvokevirtual java/io/PrintStream/println(Ljava/lang/String;)V\n", $3);		
+					}
+				}
+				else	// local variable
+				{
+					if(strcmp(reg_type[reg],"int")==0)
+					{
+						fprintf(file, "\tiload %d\n"
+									"\tgetstatic java/lang/System/out Ljava/io/PrintStream;\n"
+									"\tswap\n"
+									"\tinvokevirtual java/io/PrintStream/println(I)V\n", reg);
+					}
+					else if(strcmp(reg_type[reg],"float")==0)
+					{
+						fprintf(file, "\tfload %d\n"
+									"\tgetstatic java/lang/System/out Ljava/io/PrintStream;\n"
+									"\tswap\n"
+									"\tinvokevirtual java/io/PrintStream/println(F)V\n", reg);
+
+					}
+					else if(strcmp(reg_type[reg],"bool")==0)
+					{	
+						fprintf(file, "\tiload %d\n"
+									"\tgetstatic java/lang/System/out Ljava/io/PrintStream;\n"
+									"\tswap\n"
+									"\tinvokevirtual java/io/PrintStream/println(I)V\n", reg);
+					}
+					else if(strcmp(reg_type[reg], "string")==0)
+					{	
+						fprintf(file, "\taload %d\n"
+									"\tgetstatic java/lang/System/out Ljava/io/PrintStream;\n"
+									"\tswap\n"
+									"\tinvokevirtual java/io/PrintStream/println(Ljava/lang/String;)V\n", reg);
+					}
+				}
+			}
 		}
 
 ;
 
 initializer
-	: I_CONST	{		$$ = $1;	}
+	: I_CONST	{	$$ = $1;	}
 	| F_CONST	{	$$ = $1;	}
 	| TRUE	{	$$ = 1;	}
 	| FALSE	{	$$ = 0;	}
@@ -751,26 +1516,35 @@ parameter
 		{
 			if(lookup_symbol($2, scope+1, symbol_num) != -2)
 			{
-				insert_symbol(symbol_num, $2, "parameter", $1, scope+1, NULL, 0, -1);
+				insert_symbol(symbol_num, $2, "parameter", $1, scope+1, NULL, 0, funcReg_num);
 				strcat(params,$1);
 				strcat(params,", ");
-
 				param_index[param_num] = symbol_num;	// Record the index for removing later when function declaration
-				symbol_num++;
-
-				if(strcmp($1,"int")==0)
-					param_type[param_num] = 'I';
-				else if(strcmp($1,"float")==0)
-					param_type[param_num] = 'F';
-				else if(strcmp($1,"bool")==0)
-					param_type[param_num] = 'Z';
-				else if(strcmp($1, "string")==0)
-					param_type[param_num] = 's';
-				else if(strcmp($1, "void")==0)
-					param_type[param_num] = 'V';
-
-				param_num++;
 				
+				if(strcmp($1,"int")==0)
+				{
+					funcReg_type[param_num] = 'I';
+				}
+				else if(strcmp($1,"float")==0)
+				{		
+					funcReg_type[param_num] = 'F';
+				}
+				else if(strcmp($1,"bool")==0)
+				{	
+					funcReg_type[param_num] = 'Z';
+				}
+				else if(strcmp($1, "string")==0)
+				{	
+					funcReg_type[param_num] = 's';
+				}
+				else if(strcmp($1, "void")==0)
+				{	
+					funcReg_type[param_num] = 'V';
+				}
+			
+				++symbol_num;
+				++param_num;
+				++funcReg_num;
 			}
 			else
 			{
@@ -788,15 +1562,7 @@ argument_list
 ;
 
 argument
-	: ID
-		{
-			if(lookup_symbol($1, scope, symbol_num) == -1)
-			{
-				set_err(2,"Undeclared variable",$1);
-			}
-		}
-
-	| expr
+	: expr
 ;
 
 val
@@ -811,66 +1577,139 @@ val
 			{
 				int reg = get_register(symbol_table, $1, scope, symbol_num);
 				if(reg==-1)		// global variable
-				{
-					fprintf(file, "\tgetstatic %s/%s ", CLASS_NAME, $1);
-					printf("----cmp = %d\n",reg);
+				{	
 					char type[7] = {0};
 					strcpy(type, get_type($1, scope, symbol_num));
 					if(strcmp(type,"int")==0)
 					{
-						fprintf(file, "I\n");
-						op_type = 'I';
+						
+						if(op_type==0 || op_type=='I')
+						{
+							fprintf(file, "\tgetstatic %s/%s I\n", CLASS_NAME, $1);
+							op_type = 'I';
+						}
+						else if(op_type == 'F')
+						{
+							fprintf(file, "\tgetstatic %s/%s I\n", CLASS_NAME, $1);
+							fprintf(file, "\ti2f\n");
+							op_type = 'F';
+						}
 					}
 					else if(strcmp(type,"float")==0)
-					{
-						fprintf(file, "F\n");
-						op_type = 'F';
+					{	
+						if(op_type=='I')
+						{
+							fprintf(file, "\ti2f\n");
+							fprintf(file, "\tgetstatic %s/%s F\n", CLASS_NAME, $1);
+							op_type = 'F';
+						}
+						else if(op_type == 0 || op_type =='F')
+						{
+							fprintf(file, "\tgetstatic %s/%s F\n", CLASS_NAME, $1);
+							op_type = 'F';
+						}					
 					}
 					else if(strcmp(type,"bool")==0)
 					{
-						fprintf(file, "Z\n");
-						op_type = 'I';
+						if(op_type==0 || op_type=='I')
+						{
+							fprintf(file, "\tgetstatic %s/%s Z\n", CLASS_NAME, $1);
+							op_type = 'I';
+						}
+						else if(op_type == 'F')
+						{
+							fprintf(file, "\tgetstatic %s/%s Z\n", CLASS_NAME, $1);
+							fprintf(file, "\ti2f\n");
+							op_type = 'F';
+						}
+
 					}
 					else if(strcmp(type, "string")==0)
 					{
-						fprintf(file, "Ljava/lang/String;\n");		
+						fprintf(file, "\tgetstatic %s/%s Ljava/lang/String;\n", CLASS_NAME, $1);		
 					}
 				}
 				else	// local variable
 				{
 					if(strcmp(reg_type[reg],"int")==0)
-					{
-						fprintf(file, "\tiload %d\n",reg);
-						op_type = 'I';
+					{	
+						if(op_type==0 || op_type=='I')
+						{
+							fprintf(file, "\tiload %d\n",reg);
+							op_type = 'I';
+						}
+						else if(op_type == 'F')
+						{
+							fprintf(file, "\tiload %d\n",reg);
+							fprintf(file, "\ti2f\n");
+							op_type = 'F';
+						}
 					}
 					else if(strcmp(reg_type[reg],"float")==0)
 					{
-						fprintf(file, "\tfload %d\n",reg);
-						op_type = 'F';
+						if(op_type=='I')
+						{
+							fprintf(file, "\ti2f\n");
+							fprintf(file, "\tfload %d\n",reg);
+							op_type = 'F';
+						}
+						else if(op_type == 0 || op_type == 'F')
+						{
+							fprintf(file, "\tfload %d\n",reg);
+							op_type = 'F';
+						}
 					}
 					else if(strcmp(reg_type[reg],"bool")==0)
 					{	
-						fprintf(file, "\tiload %d\n",reg);
-						op_type = 'I';
+						if(op_type==0 || op_type=='I')
+						{
+							fprintf(file, "\tiload %d\n",reg);
+							op_type = 'I';
+						}
+						else if(op_type == 'F')
+						{
+							fprintf(file, "\tiload %d\n",reg);
+							fprintf(file, "\ti2f\n");
+							op_type = 'F';
+						}		
 					}
 					else if(strcmp(reg_type[reg], "string")==0)
 					{	
-						fprintf(file, "\tiload %d\n",reg);
+						fprintf(file, "\taload %d\n",reg);
 					}
 				}
 			}
 		}
 	| I_CONST	
 		{	
-			$$ = $1;
-			fprintf(file, "\tldc %d\n", $1);
-			op_type = 'I';
+			if(op_type==0 || op_type=='I')
+			{
+				$$ = (int)$1;
+				fprintf(file, "\tldc %d\n", (int)$1);
+				op_type = 'I';
+			}
+			else if(op_type == 'F')
+			{
+				$$ = (double)$1;
+				fprintf(file, "\tldc %d\n", (int)$1);
+				fprintf(file, "\ti2f\n");
+				op_type = 'F';
+			}
 		}
 	| F_CONST
-		{	
-			$$ = $1;	
-			fprintf(file, "\tldc %f\n", $1);
-			op_type = 'F';
+		{		
+			$$ = (double)$1;
+			if(op_type=='I')
+			{
+				fprintf(file, "\ti2f\n");
+				fprintf(file, "\tldc %f\n", (double)$1);
+				op_type = 'F';
+			}
+			else if(op_type==0 || op_type =='F')
+			{
+				fprintf(file, "\tldc %f\n", (double)$1);
+				op_type = 'F';
+			}
 		}
 	| STR_CONST	
 		{
@@ -878,14 +1717,14 @@ val
 		}
 	| TRUE	
 		{	
-			$$ = 1;
-			fprintf(file, "\tldc 1\n");
+			fprintf(file, "\tldc %d\n", (int)1);
+			$$ = (int)1;
 			op_type = 'I';
 		}
 	| FALSE	
 		{	
-			$$ = 0;
-			fprintf(file, "\tldc 0\n");
+			fprintf(file, "\tldc %d\n", (int)0);
+			$$ = (int)0;
 			op_type = 'I';
 		}
 ;
@@ -995,7 +1834,7 @@ void insert_symbol(int index, char *name, char *entry_type, char *data_type, int
 int lookup_symbol(char *name, int scope_level, int symbol_num)
 {
 	int i = 0;
-	for(i=0; i<symbol_num; i++)
+	for(i=0; i<symbol_num; ++i)
 	{
 		if(strcmp(name, symbol_table[i]->name)==0 && symbol_table[i]->scope_level==scope_level)
 		{
@@ -1015,7 +1854,7 @@ void dump_symbol(int symbol_num, int scope)
 {
     int i,j;
 	int insert = 0;
-	for(i=0; i<symbol_num; i++)
+	for(i=0; i<symbol_num; ++i)
 	{
 		if(symbol_table[i]->scope_level==scope)
 		{
@@ -1027,13 +1866,13 @@ void dump_symbol(int symbol_num, int scope)
 	{
 		printf("\n%-10s%-10s%-12s%-10s%-10s%-10s\n\n",
            		"Index", "Name", "Kind", "Type", "Scope", "Attribute");
-		for(i=0,j=0; i<symbol_num; i++)
+		for(i=0,j=0; i<symbol_num; ++i)
 		{
 			if(symbol_table[i]->scope_level==scope)
 			{
 				printf("%-10d%-10s%-12s%-10s%-10d", j, symbol_table[i]->name, symbol_table[i]->entry_type, symbol_table[i]->data_type, symbol_table[i]->scope_level);
 				printf("%-s\n",symbol_table[i]->param);
-				j++;
+				++j;
 				memset(symbol_table[i],0,sizeof(struct symbol));
 				symbol_table[i]->scope_level = -1;
 			}
@@ -1045,7 +1884,7 @@ void dump_symbol(int symbol_num, int scope)
 int get_register(struct symbol **table, char *name, int scope_level, int symbol_num)
 {
 	int i = 0;
-	for(i=0; i<symbol_num; i++)
+	for(i=0; i<symbol_num; ++i)
 	{
 		if(strcmp(name, table[i]->name)==0 && table[i]->scope_level<=scope_level)
 		{
@@ -1056,19 +1895,30 @@ int get_register(struct symbol **table, char *name, int scope_level, int symbol_
 	return -1;
 }
 
-char *get_type(char *name, int scope_level, int symbol_num)
+char* get_type(char *name, int scope_level, int symbol_num)
 {
 	int i = 0;
-	for(i=0; i<symbol_num; i++)
+	for(i=0; i<symbol_num; ++i)
 	{
 		if(strcmp(name, symbol_table[i]->name)==0 && symbol_table[i]->scope_level<=scope_level)
 		{
 			return symbol_table[i]->data_type;
 		}
 	}
-
 	return 0;
+}
 
+char* get_attribute(char *name, int scope_level, int symbol_num)
+{
+	int i = 0;
+	for(i=0; i<symbol_num; ++i)
+	{
+		if(strcmp(name, symbol_table[i]->name)==0 && symbol_table[i]->scope_level<=scope_level)
+		{
+			return symbol_table[i]->param;
+		}
+	}
+	return 0;
 }
 
 
