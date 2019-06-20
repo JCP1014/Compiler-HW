@@ -17,10 +17,10 @@ int symbol_num = 0;
 int err_flag = 0;	// 0: No error;  1: Syntatic error;  2: Undeclared or Redeclared;  3: Arithmetic error or Function error
 char err_type[20]  = {0};
 char err_symbol[BUF_SIZE] = {0};
-char params[BUF_SIZE] = {0};
+char params[BUF_SIZE] = {0};	// buffer for types of parameters
 int dump = 0;
 int add_scope = 0;
-int func_flag = 0;
+int func_flag = 0;	// Enter function, use function register
 int param_index[50] = {0};
 int param_num = 0;
 int funcReg_num = 0;	// number of variables in function definition
@@ -38,6 +38,8 @@ int if_exitFlag[50] = {0};	// whether current if_group should exit later
 int while_group[50] = {0};	// number of while_group in each scope
 int while_exitFlag[50] = {0};	// whether current while_group should exit later
 int zero_flag = 0;
+int invoke_flag = 0;
+char invoke_arg[BUF_SIZE] = {0};
 
 FILE *file; // To generate .j file for Jasmin
 
@@ -120,6 +122,7 @@ void gencode_function();
 %type <f_val> primary_expr
 %type <string> opassign_operator
 %type <string> opassign_operand
+%type <string> func_id
 
 /* Yacc will start at this nonterminal */
 %start program
@@ -997,12 +1000,16 @@ unary_operator
 
 postfix_expr
 	: primary_expr	{ $$ = $1; }//printf("----------postfix_expr = %f\n",$$)
-	| ID LB RB
+	| func_id LB RB
 		{
 			int lookup_result = lookup_symbol($1, scope, symbol_num);
 			if(lookup_result == -1)
 			{	
 				set_err(2,"Undeclared function",$1);
+			}
+			else if(strlen(symbol_table[lookup_result]->param)!=0)
+			{
+				set_err(3, "function formal parameter is not the same", "");
 			}
 			else
 			{
@@ -1035,19 +1042,29 @@ postfix_expr
 					op_type = 's';
 				}
 			}
+			memset(invoke_arg,0,sizeof(invoke_arg));
+			invoke_flag = 0;
 		}
-	| ID LB argument_list RB
+	| func_id LB argument_list RB
 		{
-			int lookup_result = lookup_symbol($1, scope, symbol_num);
+			int lookup_result = lookup_symbol($1, scope, symbol_num);	
+			char temp[256] = {0};	
+			strncpy(temp,invoke_arg,strlen(invoke_arg)-2);
+			char *cut = strstr(temp, ", ");	
+
 			if(lookup_result == -1)
 			{
 				set_err(2,"Undeclared function",$1);
 			}
+			else if(strcmp(symbol_table[lookup_result]->param, cut+2)!=0)
+			{	
+				set_err(3,"function formal parameter is not the same","");
+			}
 			else
 			{
 				fprintf(file, "\tinvokestatic %s/%s(", CLASS_NAME, $1);
-				
-				char temp[256] = {0};
+
+				memset(temp,0,sizeof(temp));
 				strcpy(temp, get_attribute($1, scope, symbol_num));
 				char *arg_type;
 				arg_type = strtok(temp,", ");
@@ -1099,12 +1116,10 @@ postfix_expr
 				else if(strcmp(type, "string")==0)
 				{
 					fprintf(file, "Ljava/lang/String;\n");
-				}
-
-				
-
+				}			
 			}
-
+			memset(invoke_arg,0,sizeof(invoke_arg));
+			invoke_flag = 0;
 		}	
 	| ID INC
 		{
@@ -1169,6 +1184,14 @@ postfix_expr
 					fprintf(file, "\tistore %d\n",reg);
 				}
 			}
+		}
+;
+
+func_id
+	: ID
+		{
+			invoke_flag = 1;
+			strcpy($$,$1);
 		}
 ;
 
@@ -1983,11 +2006,17 @@ val
 			}
 			else
 			{
+				char type[7] = {0};
+				strcpy(type, get_type($1, scope, symbol_num));
+				if(invoke_flag==1)
+				{
+					strcat(invoke_arg, type);
+					strcat(invoke_arg, ", ");
+				}
+
 				int reg = get_register(symbol_table, $1, scope, symbol_num);
 				if(reg==-1)		// global variable
 				{	
-					char type[7] = {0};
-					strcpy(type, get_type($1, scope, symbol_num));
 					if(strcmp(type,"int")==0)
 					{
 						
@@ -2097,6 +2126,9 @@ val
 		}
 	| I_CONST	
 		{	
+			
+			strcpy(invoke_arg,"int, ");
+
 			if(op_type==0 || op_type=='I')
 			{
 				$$ = (int)$1;
@@ -2117,6 +2149,7 @@ val
 		}
 	| F_CONST
 		{		
+			strcpy(invoke_arg,"float, ");			
 			$$ = (double)$1;
 			if(op_type=='I')
 			{
@@ -2136,17 +2169,20 @@ val
 		}
 	| STR_CONST	
 		{
+			strcpy(invoke_arg,"string, ");
 			fprintf(file, "\tldc \"%s\"\n", $1);
 			op_type = 's';
 		}
 	| TRUE	
 		{	
+			strcpy(invoke_arg,"bool, ");
 			fprintf(file, "\tldc %d\n", (int)1);
 			$$ = (int)1;
 			op_type = 'Z';
 		}
 	| FALSE	
 		{	
+			strcpy(invoke_arg,"bool, ");
 			fprintf(file, "\tldc %d\n", (int)0);
 			$$ = (int)0;
 			op_type = 'Z';
@@ -2270,8 +2306,14 @@ int lookup_symbol(char *name, int scope_level, int symbol_num)
 			else
 				return -2;
 		}
+		else if(strcmp(name, symbol_table[i]->name)==0 && symbol_table[i]->forward>0)
+		{
+			return i;
+		}
 		else if(strcmp(name, symbol_table[i]->name)==0 && symbol_table[i]->scope_level<scope_level)
+		{
 			return -3;
+		}
 	}
 
 	return -1;

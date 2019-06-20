@@ -12,10 +12,6 @@ void main(){
    int a;
    a = foo(4);
    lol(a);
-
-	float b = 1;
-	float c = 2;
-	c % b;
    return;
 }
 
