@@ -399,7 +399,7 @@ declaration
 				{
 					set_err(3,"function return type is not the same","");
 				}
-				else if(strcmp(temp, symbol_table[lookup_result]->param)!=0)
+				else if(strcmp(temp, symbol_table[lookup_result]->param)!=0 || strlen(symbol_table[lookup_result]->param)==0)
 				{
 					set_err(3,"function formal parameter is not the same","");
 				}
@@ -1050,13 +1050,12 @@ postfix_expr
 			int lookup_result = lookup_symbol($1, scope, symbol_num);	
 			char temp[256] = {0};	
 			strncpy(temp,invoke_arg,strlen(invoke_arg)-2);
-			char *cut = strstr(temp, ", ");	
-
+			char *cut = strstr(temp, ", ");		
 			if(lookup_result == -1)
 			{
 				set_err(2,"Undeclared function",$1);
 			}
-			else if(strcmp(symbol_table[lookup_result]->param, cut+2)!=0)
+			else if(strlen(symbol_table[lookup_result]->param)==0 && strcmp(symbol_table[lookup_result]->param, cut+2)!=0)
 			{	
 				set_err(3,"function formal parameter is not the same","");
 			}
@@ -1440,7 +1439,7 @@ compound_stat
 						return_type = 'V';
 					}
 				}
-				else if(strcmp(temp,symbol_table[lookup_result]->param)!=0)
+				else if(strcmp(temp,symbol_table[lookup_result]->param)!=0 || strlen(symbol_table[lookup_result]->param)==0)
 				{
 					set_err(3,"function formal parameter is not the same","");
 					if(strcmp($1,"int")==0)
@@ -2011,7 +2010,7 @@ val
 				if(invoke_flag==1)
 				{
 					strcat(invoke_arg, type);
-					strcat(invoke_arg, ", ");
+					strcat(invoke_arg, ", ");	
 				}
 
 				int reg = get_register(symbol_table, $1, scope, symbol_num);
@@ -2127,8 +2126,7 @@ val
 	| I_CONST	
 		{	
 			
-			strcpy(invoke_arg,"int, ");
-
+			strcat(invoke_arg,"int, ");
 			if(op_type==0 || op_type=='I')
 			{
 				$$ = (int)$1;
@@ -2149,7 +2147,7 @@ val
 		}
 	| F_CONST
 		{		
-			strcpy(invoke_arg,"float, ");			
+			strcat(invoke_arg,"float, ");			
 			$$ = (double)$1;
 			if(op_type=='I')
 			{
@@ -2169,20 +2167,20 @@ val
 		}
 	| STR_CONST	
 		{
-			strcpy(invoke_arg,"string, ");
+			strcat(invoke_arg,"string, ");
 			fprintf(file, "\tldc \"%s\"\n", $1);
 			op_type = 's';
 		}
 	| TRUE	
 		{	
-			strcpy(invoke_arg,"bool, ");
+			strcat(invoke_arg,"bool, ");
 			fprintf(file, "\tldc %d\n", (int)1);
 			$$ = (int)1;
 			op_type = 'Z';
 		}
 	| FALSE	
 		{	
-			strcpy(invoke_arg,"bool, ");
+			strcat(invoke_arg,"bool, ");
 			fprintf(file, "\tldc %d\n", (int)0);
 			$$ = (int)0;
 			op_type = 'Z';

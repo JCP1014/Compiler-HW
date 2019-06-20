@@ -1,6 +1,6 @@
-int foo(int a) {
-   a += 6;
-   return a;
+int foo(int a);
+int foo() {
+
 }
 
 void lol(int a) {
