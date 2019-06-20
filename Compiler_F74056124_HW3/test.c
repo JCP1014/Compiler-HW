@@ -1,17 +1,22 @@
-int foo(int a) {
-   a += 6;
-   return a;
-}
-
-void lol(float a) {
-    print(a);
-	return;
-}
-
+int a = 9;
 void main(){
-   float a;
-   a = foo(4);
-   lol(a);
-   return;
+   if(a>3){
+	a -=3;
+	if(a<=0){
+		print("error");
+	}else if(a==6){
+		int b = 0;
+		print(b);
+		while(b < 8){
+			print(b);
+			b++;
+		}
+	}
+}
+	
+	if(a>=2){
+		print(a);
+	}
+	return;
 }
 

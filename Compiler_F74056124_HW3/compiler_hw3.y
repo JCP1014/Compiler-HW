@@ -41,6 +41,7 @@ int zero_flag = 0;
 int invoke_flag = 0;
 char invoke_arg[BUF_SIZE] = {0};
 int gencode_flag = 1;
+int while_flag = 0;
 
 FILE *file; // To generate .j file for Jasmin
 
@@ -900,56 +901,56 @@ relational_expr
 relational_operand
 	: I_CONST
 		{
-			if(if_endFlag[scope-1]==1)
+			/*if(if_endFlag[scope-1]==1 && while_flag!=1 && )
 			{
 				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, if_group[scope-1]);
 				fprintf(file, "END%d_%d_%d:\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 				if_endFlag[scope-1] = 0; 
-			}
+			}*/
 			fprintf(file, "\tldc %d\n", $1);
 			op_type = 'I';
 		}
 	| F_CONST
 		{
-			if(if_endFlag[scope-1]==1)
+			/*if(if_endFlag[scope-1]==1 && while_flag!=1)
 			{
 				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, if_group[scope-1]);
 				fprintf(file, "END%d_%d_%d:\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 				if_endFlag[scope-1] = 0; 
-			}
+			}*/
 			fprintf(file, "\tldc %f\n", $1);
 			op_type = 'F';
 		}
 	| TRUE
 		{
-			if(if_endFlag[scope-1]==1)
+			/*f(if_endFlag[scope-1]==1 && while_flag!=1)
 			{
 				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, if_group[scope-1]);
 				fprintf(file, "END%d_%d_%d:\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 				if_endFlag[scope-1] = 0; 
-			}
+			}*/
 			fprintf(file, "\tldc 1\n");
 			op_type = 'Z';
 		}
 	| FALSE
 		{
-			if(if_endFlag[scope-1]==1)
+			/*if(if_endFlag[scope-1]==1 && while_flag!=1)
 			{
 				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, if_group[scope-1]);
 				fprintf(file, "END%d_%d_%d:\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 				if_endFlag[scope-1] = 0; 
-			}
+			}*/
 			fprintf(file, "\tldc 0\n");
 			op_type = 'Z';
 		}
 	| ID
 		{
-			if(if_endFlag[scope-1]==1)
+			/*if(if_endFlag[scope-1]==1 && while_flag!=1)
 			{
 				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, if_group[scope-1]);
 				fprintf(file, "END%d_%d_%d:\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 				if_endFlag[scope-1] = 0; 
-			}
+			}*/
 
 			int lookup_result = lookup_symbol($1, scope, symbol_num);
 			if(lookup_result == -1)
@@ -1327,7 +1328,7 @@ primary_expr
 ;
 
 compound_stat
-	: IF LB expr RB LCB
+	: if LB expr RB LCB
 		{
 			++scope;
 			++if_group[scope-1];
@@ -1370,7 +1371,7 @@ compound_stat
 			fprintf(file, "\tgoto END%d_%d_%d\n", scope-1, if_group[scope-1],if_branch[scope-1]);
 			fprintf(file, "LABEL%d_%d_%d:\n", scope-1, if_group[scope-1], if_branch[scope-1]);
 		}
-	| RCB ELSE IF LB expr RB LCB
+	| RCB elseif LB expr RB LCB
 		{
 			dump = 1;
 			add_scope = 1;
@@ -1462,6 +1463,7 @@ compound_stat
 				}
 			}
 			relation_flag = 0;
+			while_flag = 0;
 			fprintf(file, "\tgoto FALSE%d_%d\n", scope-1, while_group[scope-1]);
 			fprintf(file, "TRUE%d_%d:\n", scope-1, while_group[scope-1]);
 		}
@@ -1867,6 +1869,7 @@ compound_stat
 while
 	: WHILE
 		{
+			while_flag = 1;
 			++while_group[scope];
 			while_exitFlag[scope] = 1;
 			fprintf(file, "BEGIN%d_%d:\n", scope, while_group[scope]);
@@ -1947,6 +1950,23 @@ jump_stat
 		}
 ;
 
+if 
+	: IF
+		{
+		}
+;
+
+elseif 
+	: ELSE IF
+		{
+			if(if_endFlag[scope-1]==1 && while_flag!=1)
+			{
+				fprintf(file, "\tgoto EXIT%d_%d\n", scope-1, if_group[scope-1]);
+				fprintf(file, "END%d_%d_%d:\n", scope-1, if_group[scope-1], if_branch[scope-1]);
+				if_endFlag[scope-1] = 0; 
+			}
+		}
+;
 print_func
 	: PRINT LB I_CONST RB
 		{
