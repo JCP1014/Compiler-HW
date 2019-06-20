@@ -1,4 +1,9 @@
 int a = 9;
+bool foo(){
+
+	bool b = true;
+	return b;
+}
 void main(){
    if(a>3){
 	a -=3;
@@ -15,7 +20,8 @@ void main(){
 }
 	
 	if(a>=2){
-		print(a);
+		bool c = foo();
+		print(c);
 	}
 	return;
 }

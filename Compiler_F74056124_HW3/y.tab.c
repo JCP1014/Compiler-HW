@@ -1759,7 +1759,7 @@ yyreduce:
 						}
 						else if(strcmp((yyvsp[-4].string), "bool")==0)
 						{
-							if(op_type == 0 || op_type == 'I')
+							if(op_type == 0 || op_type == 'I' || op_type =='Z')
 								fprintf(file,"\tistore %d\n",funcReg_num);
 							else if(op_type == 'F')
 							{
@@ -1798,7 +1798,7 @@ yyreduce:
 						}
 						else if(strcmp((yyvsp[-4].string), "bool")==0)
 						{
-							if(op_type == 0 || op_type == 'I')
+							if(op_type == 0 || op_type == 'I' || op_type == 'Z')
 								fprintf(file,"\tistore %d\n",reg_num);
 							else if(op_type == 'F')
 							{
@@ -3251,27 +3251,27 @@ yyreduce:
 					if(strcmp((yyvsp[-4].string),"int")==0)
 					{
 						return_type = 'I';
-						fprintf(file, ")I\n");
+						fprintf(file, "I\n");
 					}
 					else if(strcmp((yyvsp[-4].string),"float")==0)
 					{
 						return_type = 'F';
-						fprintf(file, ")F\n");
+						fprintf(file, "F\n");
 					}
 					else if(strcmp((yyvsp[-4].string),"bool")==0)
 					{
 						return_type = 'Z';
-						fprintf(file, ")Z\n");
+						fprintf(file, "Z\n");
 					}
 					else if(strcmp((yyvsp[-4].string), "string")==0)
 					{
 						return_type = 's';
-						fprintf(file, ")Ljava/lang/String;\n");
+						fprintf(file, "Ljava/lang/String;\n");
 					}
 					else if(strcmp((yyvsp[-4].string), "void")==0)
 					{
 						return_type = 'V';
-						fprintf(file, ")V\n");
+						fprintf(file, "V\n");
 					}
 					fprintf(file, ".limit stack 50\n"
 									".limit locals 50\n");
