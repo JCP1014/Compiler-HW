@@ -14,7 +14,7 @@ extern char buf[BUF_SIZE]; // Get current code line from lex
 extern char* yytext;   // Get current token from lex
 int scope = 0;
 int symbol_num = 0;
-int err_flag = 0;	// 0: No error;  1: syntatic error;  2: semantic error
+int err_flag = 0;	// 0: No error;  1: Syntatic error;  2: Undeclared or Redeclared;  3: Arithmetic error or Function error
 char err_type[20]  = {0};
 char err_symbol[BUF_SIZE] = {0};
 char params[BUF_SIZE] = {0};
@@ -26,18 +26,18 @@ int param_num = 0;
 int funcReg_num = 0;	// number of variables in function definition
 char funcReg_type[50] = {0}; // type of parameters in the form of jasmin type descriptoir
 char return_type = 0;
-
 int reg_num = 0;
 char reg_type[50][7] = {0};
 char op_type = 0;	// operand type
+double op_val = 0;	// operand value
 char relation_flag = 0;
-int if_group[50] = {0};
-int if_branch[50] = {0};
-int if_endFlag[50] = {0};
-int if_exitFlag[50] = {0};
-int while_group[50] = {0};
-int while_exitFlag[50] = {0};
-
+int if_group[50] = {0};	// number of if_groups in each scope
+int if_branch[50] = {0};	// number of branches in current if_group in each scope
+int if_endFlag[50] = {0};	// whether current branch should be ended later
+int if_exitFlag[50] = {0};	// whether current if_group should exit later
+int while_group[50] = {0};	// number of while_group in each scope
+int while_exitFlag[50] = {0};	// whether current while_group should exit later
+int zero_flag = 0;
 
 FILE *file; // To generate .j file for Jasmin
 
@@ -145,7 +145,7 @@ stat
 				printf("%d:\n",yylineno);
 			else
 				printf("%d: %s\n", yylineno, buf); 
-			if(err_flag == 2)
+			if(err_flag == 2 || err_flag == 3)
 			{	
 				semantic_error();
 			}
@@ -166,6 +166,7 @@ stat
 			memset(buf, 0, sizeof(buf));	// Clear buffer
 			op_type = 0;
 			relation_flag = 0;
+			zero_flag = 0;
 		}
 
 ;
@@ -362,7 +363,7 @@ declaration
 	| type ID LB parameter_list RB SEMICOLON
 		{			
 			int lookup_result = lookup_symbol($2, scope, symbol_num);
-			if(lookup_result == -2 || lookup_result >= 0)
+			if(lookup_result == -2 || (lookup_result >= 0 && symbol_table[lookup_result]->forward==1) )
 			{
 				set_err(2,"Redeclared function",$2);
 			}
@@ -386,20 +387,46 @@ declaration
 				insert_symbol(symbol_num, $2, "function", $1, scope, temp, 1, -1);
 				++symbol_num;
 			}
+			else if(lookup_result>=0 && symbol_table[lookup_result]->forward==2)
+			{
+				char temp[256] = {0};
+				strncpy(temp,params,strlen(params)-2);
+
+				if(strcmp($1, symbol_table[lookup_result]->data_type)!=0)
+				{
+					set_err(3,"function return type is not the same","");
+				}
+				else if(strcmp(temp, symbol_table[lookup_result]->param)!=0)
+				{
+					set_err(3,"function formal parameter is not the same","");
+				}
+
+			}
 			memset(params,0,sizeof(params));
 			memset(param_index,0,sizeof(param_index));
 		}
 	| type ID LB RB SEMICOLON
 		{			
 			int lookup_result = lookup_symbol($2, scope, symbol_num);
-			if(lookup_result == -2 || lookup_result >= 0)
+			if( lookup_result == -2 || (lookup_result >= 0 && symbol_table[lookup_result]->forward==1) )
 			{
 				set_err(2,"Redeclared function",$2);
 			}
-			else
+			else if(lookup_result != -2 && lookup_result < 0)
 			{
 				insert_symbol(symbol_num, $2, "function", $1, scope, NULL, 1, -1);
 				++symbol_num;
+			}
+			else if(lookup_result>=0 && symbol_table[lookup_result]->forward==2)
+			{
+				if(strcmp($1, symbol_table[lookup_result]->data_type)!=0)
+				{
+					set_err(3,"function return type is not the same","");
+				}
+				else if(strlen(symbol_table[lookup_result]->param)!=0)
+				{
+					set_err(3,"function formal parameter is not the same","");
+				}
 			}
 		}
 
@@ -453,7 +480,7 @@ assignment_expr
 				{
 					if(strcmp(reg_type[reg],"int")==0)
 					{
-						if(op_type == 'I')
+						if(op_type == 'I' || op_type == 'Z')
 							fprintf(file, "\tistore %d\n",reg);
 						else if(op_type == 'F')
 						{
@@ -465,7 +492,7 @@ assignment_expr
 					{
 						if(op_type == 'F')
 							fprintf(file, "\tfstore %d\n",reg);
-						else if(op_type == 'I')
+						else if(op_type == 'I' || op_type == 'Z')
 						{
 							fprintf(file, "\ti2f\n"
 										"\tfstore %d\n",reg);
@@ -485,7 +512,7 @@ assignment_expr
 		}
 	| opassign_operand opassign_operator assignment_expr
 		{
-			if(op_type == 'I')
+			if(op_type == 'I' || op_type == 'Z')
 			{	
 				if(strcmp($2, "+=")==0)
 					fprintf(file, "\tiadd\n");
@@ -494,9 +521,19 @@ assignment_expr
 				else if(strcmp($2, "*=")==0)
 					fprintf(file, "\timul\n");
 				else if(strcmp($2, "/=")==0)
-					fprintf(file, "\tidiv\n");
+				{
+					if(zero_flag==1)
+						set_err(3,"divide by zero","");
+					else
+						fprintf(file, "\tidiv\n");
+				}
 				else if(strcmp($2, "%=")==0)
-					fprintf(file, "\tirem\n");
+				{
+					if(zero_flag==1)
+						set_err(3,"Divide by zero","");
+					else
+						fprintf(file, "\tirem\n");
+				}
 			}
 			else if(op_type == 'F')
 			{
@@ -507,7 +544,16 @@ assignment_expr
 				else if(strcmp($2, "*=")==0)
 					fprintf(file, "\tfmul\n");
 				else if(strcmp($2, "/=")==0)
-					fprintf(file, "\tfdiv\n");
+				{
+					if(zero_flag==1)
+						set_err(3,"Divide by zero","");
+					else
+						fprintf(file, "\tfdiv\n");
+				}
+				else if(strcmp($2, "%=")==0)
+				{
+					set_err(3,"Modulo operator with floating point operands","");
+				}
 			}
 				
 			int reg = get_register(symbol_table, $1, scope, symbol_num);
@@ -537,7 +583,7 @@ assignment_expr
 			{
 				if(strcmp(reg_type[reg],"int")==0)
 				{
-					if(op_type == 'I')
+					if(op_type == 'I' || op_type == 'Z')
 						fprintf(file, "\tistore %d\n",reg);
 					else if(op_type == 'F')
 					{
@@ -549,7 +595,7 @@ assignment_expr
 				{
 					if(op_type == 'F')
 						fprintf(file, "\tfstore %d\n",reg);
-					else if(op_type == 'I')
+					else if(op_type == 'I' || op_type == 'Z')
 					{
 						fprintf(file, "\ti2f\n"
 									"\tfstore %d\n",reg);
@@ -571,8 +617,8 @@ assignment_expr
 opassign_operand
 	: ID
 		{
-			strcpy($$, $1);
-			int lookup_result = lookup_symbol($1, scope, symbol_num);
+			strcpy($$, $1);	
+			int lookup_result = lookup_symbol($1, scope, symbol_num);	
 			if(lookup_result == -1)
 			{
 				set_err(2,"Undeclared variable",$1);
@@ -597,11 +643,12 @@ opassign_operand
 					else if(strcmp(type,"bool")==0)
 					{
 						fprintf(file, "\tgetstatic %s/%s Z\n", CLASS_NAME, $1);
-						op_type = 'I';
+						op_type = 'Z';
 					}
 					else if(strcmp(type, "string")==0)
 					{
 						fprintf(file, "\tgetstatic %s/%s Ljava/lang/String;\n", CLASS_NAME, $1);		
+						op_type = 's';
 					}
 				}
 				else	// local variable
@@ -619,11 +666,12 @@ opassign_operand
 					else if(strcmp(reg_type[reg],"bool")==0)
 					{	
 						fprintf(file, "\tiload %d\n",reg);
-						op_type = 'I';
+						op_type = 'Z';
 					}
 					else if(strcmp(reg_type[reg], "string")==0)
 					{	
 						fprintf(file, "\taload %d\n",reg);
+						op_type = 's';
 					}
 				}
 			}
@@ -659,7 +707,10 @@ relational_expr
 			if(op_type == 'I')
 				fprintf(file, "\tisub\n");
 			else if(op_type == 'F')
-				fprintf(file, "\tfsub\n");
+			{
+				fprintf(file,"\tfsub\n"
+							"\tf2i\n");
+			}	
 			relation_flag = 'E';
 		}
 	| relational_operand NE relational_operand
@@ -667,7 +718,10 @@ relational_expr
 			if(op_type == 'I')
 				fprintf(file, "\tisub\n");
 			else if(op_type == 'F')
-				fprintf(file, "\tfsub\n");
+			{
+				fprintf(file,"\tfsub\n"
+							"\tf2i\n");
+			}
 			relation_flag = 'N';
 		}
 	| relational_operand LT relational_operand
@@ -675,7 +729,10 @@ relational_expr
 			if(op_type == 'I')
 				fprintf(file, "\tisub\n");
 			else if(op_type == 'F')
-				fprintf(file, "\tfsub\n");
+			{	
+				fprintf(file,"\tfsub\n"
+							"\tf2i\n");
+			}
 			relation_flag = 'l';
 		}
 	| relational_operand MT relational_operand
@@ -683,7 +740,10 @@ relational_expr
 			if(op_type == 'I')
 				fprintf(file, "\tisub\n");
 			else if(op_type == 'F')
-				fprintf(file, "\tfsub\n");
+			{
+				fprintf(file,"\tfsub\n"
+							"\tf2i\n");
+			}
 			relation_flag = 'm';
 		}
 	| relational_operand LTE relational_operand
@@ -691,7 +751,10 @@ relational_expr
 			if(op_type == 'I')
 				fprintf(file, "\tisub\n");
 			else if(op_type == 'F')
-				fprintf(file, "\tfsub\n");
+			{
+				fprintf(file,"\tfsub\n"
+							"\tf2i\n");
+			}
 			relation_flag = 'L';
 		}
 	| relational_operand MTE relational_operand
@@ -699,7 +762,10 @@ relational_expr
 			if(op_type == 'I')
 				fprintf(file, "\tisub\n");
 			else if(op_type == 'F')
-				fprintf(file, "\tfsub\n");
+			{	
+				fprintf(file,"\tfsub\n"
+							"\tf2i\n");
+			}
 			relation_flag = 'M';
 		}
 ;
@@ -736,7 +802,7 @@ relational_operand
 				if_endFlag[scope-1] = 0; 
 			}
 			fprintf(file, "\tldc 1\n");
-			op_type = 'I';
+			op_type = 'Z';
 		}
 	| FALSE
 		{
@@ -747,7 +813,7 @@ relational_operand
 				if_endFlag[scope-1] = 0; 
 			}
 			fprintf(file, "\tldc 0\n");
-			op_type = 'I';
+			op_type = 'Z';
 		}
 	| ID
 		{
@@ -783,7 +849,7 @@ relational_operand
 					else if(strcmp(type,"bool")==0)
 					{
 						fprintf(file, "\tgetstatic %s/%s Z\n", CLASS_NAME, $1);
-						op_type = 'I';
+						op_type = 'Z';
 					}
 				}
 				else	// local variable
@@ -801,7 +867,7 @@ relational_operand
 					else if(strcmp(reg_type[reg],"bool")==0)
 					{	
 						fprintf(file, "\tiload %d\n",reg);
-						op_type = 'I';
+						op_type = 'Z';
 					}
 				}
 			}
@@ -868,34 +934,45 @@ multiplicative_expr
 		}
 	| multiplicative_expr DIV cast_expr
 		{
-			$$ = $1 / $3;
-			switch(op_type)
+			if(zero_flag==1)
+				set_err(3,"Divide by zero","");
+			else
 			{
-				case 'I':
+				$$ = $1 / $3;
+				switch(op_type)
 				{
-					fprintf(file, "\tidiv\n");
-					break;
-				}
-				case 'F':
-				{
-					fprintf(file, "\tfdiv\n");
-					break;
+					case 'I':
+					{
+						fprintf(file, "\tidiv\n");
+						break;
+					}
+					case 'F':
+					{
+						fprintf(file, "\tfdiv\n");
+						break;
+					}
 				}
 			}
 		}
 	| multiplicative_expr MOD cast_expr
 		{	
+			
 			switch(op_type)
 			{
 				case 'I':
 				{
-					$$ = (int)$1 % (int)$3;
-					fprintf(file, "\tirem\n");
+					if(zero_flag==1)
+						set_err(3,"Divide by zero","");
+					else
+					{
+						$$ = (int)$1 % (int)$3;
+						fprintf(file, "\tirem\n");
+					}
 					break;
 				}
 				case 'F':
 				{
-					// error
+					set_err(3,"Modulo operator with floating point operands","");
 					break;
 				}
 			}
@@ -935,22 +1012,27 @@ postfix_expr
 				if(strcmp(type, "int")==0)
 				{
 					fprintf(file, "I\n");
+					op_type = 'I';
 				}
 				else if(strcmp(type, "float")==0)
 				{
 					fprintf(file, "F\n");
+					op_type = 'F';
 				}
 				else if(strcmp(type, "bool")==0)
 				{
 					fprintf(file, "Z\n");
+					op_type = 'Z';
 				}
 				else if(strcmp(type, "void")==0)
 				{
 					fprintf(file, "V\n");
+					op_type = 'V';
 				}
 				else if(strcmp(type, "string")==0)
 				{
 					fprintf(file, "Ljava/lang/String;\n");
+					op_type = 's';
 				}
 			}
 		}
@@ -1018,6 +1100,8 @@ postfix_expr
 				{
 					fprintf(file, "Ljava/lang/String;\n");
 				}
+
+				
 
 			}
 
@@ -1240,7 +1324,7 @@ compound_stat
 				func_flag = 1;
 				char temp[256]= {0};
 				strncpy(temp,params,strlen(params)-2);
-				insert_symbol(symbol_num, $2, "function", $1, scope, temp, 0, -1);
+				insert_symbol(symbol_num, $2, "function", $1, scope, temp, 2, -1);
 				++symbol_num;
 				memset(params,0,sizeof(params));
 				
@@ -1303,97 +1387,159 @@ compound_stat
 				funcReg_num = 0;
 				memset(funcReg_type, 0, sizeof(funcReg_type));
 			}
-			else if(lookup_result >= 0)	// If function forward declared, insert its attribute
+			else if(lookup_result >= 0 && symbol_table[lookup_result]->forward!=2)		// If function forward declared, insert its attribute
 			{
 				func_flag = 1;
-				if(symbol_table[lookup_result]->param==NULL)
-				{
-					char temp[256] = {0};
-					strncpy(temp,params,strlen(params)-2);
-					strcpy(symbol_table[lookup_result]->param, temp);
-					memset(params,0,sizeof(params));
-				}
+				char temp[256] = {0};
+				strncpy(temp,params,strlen(params)-2);
 
-				fprintf(file, ".method public static %s(",$2);
-				int i = 0;
-				for(i=0; i<param_num;++i)
+				if(strcmp($1, symbol_table[lookup_result]->data_type)!=0)
 				{
-					if(funcReg_type[i]=='I')
-						fprintf(file, "I");
-					else if(funcReg_type[i]=='F')
-						fprintf(file, "F");
-					else if(funcReg_type[i]=='Z')
-						fprintf(file, "Z");
-					else if(funcReg_type[i]=='s')
-						fprintf(file, "Ljava/lang/String;");
-					else if(funcReg_type[i]=='V')
-						fprintf(file, "V");
+					set_err(3,"function return type is not the same","");
+					if(strcmp($1,"int")==0)
+					{
+						return_type = 'I';
+					}
+					else if(strcmp($1,"float")==0)
+					{
+						return_type = 'F';
+					}
+					else if(strcmp($1,"bool")==0)
+					{
+						return_type = 'Z';
+					}	
+					else if(strcmp($1, "string")==0)
+					{
+						return_type = 's';
+					}
+					else if(strcmp($1, "void")==0)
+					{
+						return_type = 'V';
+					}
 				}
-				if(strcmp($1,"int")==0)
+				else if(strcmp(temp,symbol_table[lookup_result]->param)!=0)
 				{
-					return_type = 'I';
-					fprintf(file, ")I\n");
+					set_err(3,"function formal parameter is not the same","");
+					if(strcmp($1,"int")==0)
+					{
+						return_type = 'I';
+					}
+					else if(strcmp($1,"float")==0)
+					{
+						return_type = 'F';
+					}
+					else if(strcmp($1,"bool")==0)
+					{
+						return_type = 'Z';
+					}	
+					else if(strcmp($1, "string")==0)
+					{
+						return_type = 's';
+					}
+					else if(strcmp($1, "void")==0)
+					{
+						return_type = 'V';
+					}
 				}
-				else if(strcmp($1,"float")==0)
+				else 
 				{
-					return_type = 'F';
-					fprintf(file, ")F\n");
-				}
-				else if(strcmp($1,"bool")==0)
-				{
-					return_type = 'Z';
-					fprintf(file, ")Z\n");
-				}
-				else if(strcmp($1, "string")==0)
-				{
-					return_type = 's';
-					fprintf(file, ")Ljava/lang/String;\n");
-				}
-				else if(strcmp($1, "void")==0)
-				{
-					return_type = 'V';
-					fprintf(file, ")V\n");
-				}
-				fprintf(file, ".limit stack 50\n"
+					if(symbol_table[lookup_result]->param==NULL)
+					{
+						strcpy(symbol_table[lookup_result]->param, temp);
+						memset(params,0,sizeof(params));
+					}
+	
+					fprintf(file, ".method public static %s(",$2);
+					int i = 0;
+					for(i=0; i<param_num;++i)
+					{
+						if(funcReg_type[i]=='I')
+							fprintf(file, "I");
+						else if(funcReg_type[i]=='F')
+							fprintf(file, "F");
+						else if(funcReg_type[i]=='Z')
+							fprintf(file, "Z");
+						else if(funcReg_type[i]=='s')
+							fprintf(file, "Ljava/lang/String;");
+						else if(funcReg_type[i]=='V')
+							fprintf(file, "V");
+					}
+					if(strcmp($1,"int")==0)
+					{
+						return_type = 'I';
+						fprintf(file, ")I\n");
+					}
+					else if(strcmp($1,"float")==0)
+					{
+						return_type = 'F';
+						fprintf(file, ")F\n");
+					}
+					else if(strcmp($1,"bool")==0)
+					{
+						return_type = 'Z';
+						fprintf(file, ")Z\n");
+					}	
+					else if(strcmp($1, "string")==0)
+					{
+						return_type = 's';
+						fprintf(file, ")Ljava/lang/String;\n");
+					}
+					else if(strcmp($1, "void")==0)
+					{
+						return_type = 'V';
+						fprintf(file, ")V\n");
+					}
+					fprintf(file, ".limit stack 50\n"
 									".limit locals 50\n");
 
-				/*for(i=0; i<param_num;i++)
-				{
-					if(funcReg_type[i]=='I')
-						fprintf(file, "\tiload %d\n", i);
-					else if(funcReg_type[i]=='F')
-						fprintf(file, "\tfload %d\n", i);
-					else if(funcReg_type[i]=='Z')
-						fprintf(file, "\tiload %d\n", i);
-					else if(funcReg_type[i]=='s')
-						fprintf(file, "\taload %d\n", i);
-				}*/
+					/*for(i=0; i<param_num;i++)
+					{
+						if(funcReg_type[i]=='I')
+							fprintf(file, "\tiload %d\n", i);
+						else if(funcReg_type[i]=='F')
+							fprintf(file, "\tfload %d\n", i);
+						else if(funcReg_type[i]=='Z')
+							fprintf(file, "\tiload %d\n", i);
+						else if(funcReg_type[i]=='s')
+							fprintf(file, "\taload %d\n", i);
+					}*/
 
-				param_num = 0;
-				funcReg_num = 0;
-				memset(funcReg_type, 0, sizeof(funcReg_type));
+					param_num = 0;
+					funcReg_num = 0;
+					memset(funcReg_type, 0, sizeof(funcReg_type));
+				}
 			}
 			else
 			{
 				set_err(2,"Redeclared function",$2);
 			}
-	
-			++scope;
-	}
+		
+				++scope;
+		}
 	| type ID LB RB LCB
 		{
 			int lookup_result = lookup_symbol($2, scope, symbol_num); 
 			if(lookup_result == -1 || lookup_result == -3)
 			{
 				func_flag = 1;
-				insert_symbol(symbol_num, $2, "function", $1, scope, NULL, 0, -1);
+				insert_symbol(symbol_num, $2, "function", $1, scope, NULL, 2, -1);
 				++symbol_num;
 
 				if(strcmp($2,"main")==0)
 				{
 					fprintf(file, ".method public static main([Ljava/lang/String;)V\n"
 									".limit stack 50\n"
-									".limit locals 50\n");	
+									".limit locals 50\n");
+					if(strcmp($1,"int")==0)
+						return_type = 'I';
+					else if(strcmp($1,"float")==0)
+						return_type = 'F';
+					else if(strcmp($1,"bool")==0)
+						return_type = 'Z';
+					else if(strcmp($1, "string")==0)
+						return_type = 's';
+					else if(strcmp($1, "void")==0)
+						return_type = 'V';
 				}
 				else
 				{
@@ -1430,8 +1576,114 @@ compound_stat
 				funcReg_num = 0;
 				memset(funcReg_type, 0, sizeof(funcReg_type));
 			}
-			
-			else if(lookup_result == -2)
+			else if(lookup_result >= 0 && symbol_table[lookup_result]->forward!=2)	// If function forward declared
+			{
+				func_flag = 1;
+				if(strcmp($1, symbol_table[lookup_result]->data_type)!=0)
+				{
+					set_err(3,"function return type is not the same","");
+					if(strcmp($1,"int")==0)
+					{
+						return_type = 'I';
+					}
+					else if(strcmp($1,"float")==0)
+					{
+						return_type = 'F';
+					}
+					else if(strcmp($1,"bool")==0)
+					{
+						return_type = 'Z';
+					}	
+					else if(strcmp($1, "string")==0)
+					{
+						return_type = 's';
+					}
+					else if(strcmp($1, "void")==0)
+					{
+						return_type = 'V';
+					}
+				}
+				else if(strlen(symbol_table[lookup_result]->param)!=0)
+				{
+					set_err(3,"function formal parameter is not the same","");
+					if(strcmp($1,"int")==0)
+					{
+						return_type = 'I';
+					}
+					else if(strcmp($1,"float")==0)
+					{
+						return_type = 'F';
+					}
+					else if(strcmp($1,"bool")==0)
+					{
+						return_type = 'Z';
+					}	
+					else if(strcmp($1, "string")==0)
+					{
+						return_type = 's';
+					}
+					else if(strcmp($1, "void")==0)
+					{
+						return_type = 'V';
+					}
+				}
+				else
+				{
+					
+					if(strcmp($2,"main")==0)
+					{
+						fprintf(file, ".method public static main([Ljava/lang/String;)V\n"
+										".limit stack 50\n"
+										".limit locals 50\n");
+						if(strcmp($1,"int")==0)
+							return_type = 'I';
+						else if(strcmp($1,"float")==0)
+							return_type = 'F';
+						else if(strcmp($1,"bool")==0)
+							return_type = 'Z';
+						else if(strcmp($1, "string")==0)
+							return_type = 's';
+						else if(strcmp($1, "void")==0)
+							return_type = 'V';
+					}
+					else
+					{
+						fprintf(file, ".method public static %s()",$2);
+						int i = 0;
+						if(strcmp($1,"int")==0)
+						{
+							return_type = 'I';
+							fprintf(file, "I\n");
+						}
+						else if(strcmp($1,"float")==0)
+						{
+							return_type = 'F';
+							fprintf(file, "F\n");
+						}
+						else if(strcmp($1,"bool")==0)
+						{
+							return_type = 'Z';
+							fprintf(file, "Z\n");
+						}
+						else if(strcmp($1, "string")==0)
+						{
+							return_type = 's';
+							fprintf(file, "Ljava/lang/String;\n");
+						}
+						else if(strcmp($1, "void")==0)
+						{
+							return_type = 'V';
+							fprintf(file, "V\n");
+						}
+						fprintf(file, ".limit stack 50\n"
+									".limit locals 50\n");
+					}
+					param_num = 0;
+					funcReg_num = 0;
+					memset(funcReg_type, 0, sizeof(funcReg_type));
+				}
+			}
+			else
 			{
 				set_err(2,"Redeclared function",$2);
 			}
@@ -1477,31 +1729,70 @@ jump_stat
 	| BREAK SEMICOLON
 	| RET SEMICOLON
 		{
-			fprintf(file, "\treturn\n"
-							".end method\n");
+			if(return_type == 'V')
+			{
+				fprintf(file, "\treturn\n"
+								".end method\n");
+			}
+			else
+			{
+				set_err(3,"function return type is not the same","");
+			}
 			return_type = 0;
 		}
 	| RET expr SEMICOLON
 		{
 			if(return_type == 'I')
 			{	
-				fprintf(file, "\tireturn\n"
-							".end method\n");
+				if(op_type=='I')
+				{	
+					fprintf(file, "\tireturn\n"
+								".end method\n");
+				}
+				else
+				{
+					set_err(3,"function return type is not the same","");
+				}
 			}
 			else if(return_type == 'F')
 			{	
-				fprintf(file, "\tfreturn\n"
-							".end method\n");
+				if(op_type == 'F')
+				{
+					fprintf(file, "\tfreturn\n"
+								".end method\n");
+				}
+				else
+				{
+					set_err(3,"function return type is not the same","");
+				}
 			}
 			else if(return_type == 'Z')
 			{	
-				fprintf(file, "\tireturn\n"
-							".end method\n");
+				if(op_type == 'Z')
+				{
+					fprintf(file, "\tireturn\n"
+								".end method\n");
+				}
+				else
+				{
+					set_err(3,"function return type is not the same","");
+				}
 			}
 			else if(return_type == 's')
 			{	
-				fprintf(file, "\tareturn\n"
+				if(op_type == 's')
+				{ 
+					fprintf(file, "\tareturn\n"
 							".end method\n");
+				}
+				else
+				{
+					set_err(3,"function return type is not the same","");
+				}
+			}
+			else if(return_type == 'V')
+			{
+				set_err(3,"function return type is not the same","");
 			}
 			return_type = 0;
 		}
@@ -1558,7 +1849,7 @@ print_func
 					}
 					else if(strcmp(type,"bool")==0)
 					{
-						fprintf(file, "\tgetstatic compiler_hw3/%s I\n"
+						fprintf(file, "\tgetstatic compiler_hw3/%s Z\n"
 									"\tgetstatic java/lang/System/out Ljava/io/PrintStream;\n"
 									"\tswap\n"
 									"\tinvokevirtual java/io/PrintStream/println(I)V\n", $3);
@@ -1728,7 +2019,7 @@ val
 					}
 					else if(strcmp(type,"bool")==0)
 					{
-						if(op_type==0 || op_type=='I')
+						/*if(op_type==0 || op_type=='I')
 						{
 							fprintf(file, "\tgetstatic %s/%s Z\n", CLASS_NAME, $1);
 							op_type = 'I';
@@ -1738,12 +2029,15 @@ val
 							fprintf(file, "\tgetstatic %s/%s Z\n", CLASS_NAME, $1);
 							fprintf(file, "\ti2f\n");
 							op_type = 'F';
-						}
+						}*/
 
+						fprintf(file, "\tgetstatic %s/%s Z\n", CLASS_NAME, $1);
+						op_type = 'Z';
 					}
 					else if(strcmp(type, "string")==0)
 					{
-						fprintf(file, "\tgetstatic %s/%s Ljava/lang/String;\n", CLASS_NAME, $1);		
+						fprintf(file, "\tgetstatic %s/%s Ljava/lang/String;\n", CLASS_NAME, $1);
+						op_type = 's';		
 					}
 				}
 				else	// local variable
@@ -1778,7 +2072,7 @@ val
 					}
 					else if(strcmp(reg_type[reg],"bool")==0)
 					{	
-						if(op_type==0 || op_type=='I')
+						/*if(op_type==0 || op_type=='I')
 						{
 							fprintf(file, "\tiload %d\n",reg);
 							op_type = 'I';
@@ -1788,11 +2082,15 @@ val
 							fprintf(file, "\tiload %d\n",reg);
 							fprintf(file, "\ti2f\n");
 							op_type = 'F';
-						}		
+						}*/		
+
+						fprintf(file, "\tiload %d\n",reg);
+						op_type = 'Z';
 					}
 					else if(strcmp(reg_type[reg], "string")==0)
 					{	
 						fprintf(file, "\taload %d\n",reg);
+						op_type = 's';
 					}
 				}
 			}
@@ -1812,6 +2110,10 @@ val
 				fprintf(file, "\ti2f\n");
 				op_type = 'F';
 			}
+			if(zero_flag == 1)
+				zero_flag = 0;
+			if($$ == 0)
+				zero_flag = 1;
 		}
 	| F_CONST
 		{		
@@ -1827,22 +2129,27 @@ val
 				fprintf(file, "\tldc %f\n", (double)$1);
 				op_type = 'F';
 			}
+			if(zero_flag == 1)
+				zero_flag = 0;
+			if($$ == 0)
+				zero_flag = 1;
 		}
 	| STR_CONST	
 		{
 			fprintf(file, "\tldc \"%s\"\n", $1);
+			op_type = 's';
 		}
 	| TRUE	
 		{	
 			fprintf(file, "\tldc %d\n", (int)1);
 			$$ = (int)1;
-			op_type = 'I';
+			op_type = 'Z';
 		}
 	| FALSE	
 		{	
 			fprintf(file, "\tldc %d\n", (int)0);
 			$$ = (int)0;
-			op_type = 'I';
+			op_type = 'Z';
 		}
 ;
 
@@ -1898,16 +2205,19 @@ void yyerror(char *s)
 
 void semantic_error()
 {
-    printf("\n|-----------------------------------------------|\n");
+	printf("\n|-----------------------------------------------|\n");
     printf("| Error found in line %d: %s\n", yylineno, buf);
-	printf("| %s %s", err_type, err_symbol);
+	if(err_flag==2)
+		printf("| %s %s", err_type, err_symbol);
+	else if(err_flag==3)
+		printf("| %s", err_type);
     printf("\n|-----------------------------------------------|\n\n");
 	err_flag = 0;	// reset
 }
 
 void set_err(int flag, char *type, char *symbol)
 {
-	err_flag = flag;	// 0: No error;  1: syntatic error;  2: semantic error
+	err_flag = flag;	// 0: No error;  1: Syntatic error;  2: Undeclared or Redeclared;  3: Arithmetic error or Function error
 	strcpy(err_type, type);
 	strcpy(err_symbol, symbol);
 }
@@ -1946,7 +2256,7 @@ void insert_symbol(int index, char *name, char *entry_type, char *data_type, int
 /* Return -1 if the symbol with same name and same scope doesn't exist, so can be inserted;
 	return -2 if the symbol with same name and same scope exists, so can't be redeclared;
 	return -3 if the symbol with same name exists, and it is in seeable scope;
-	return entry number if the symbol is a function and it has been forward declared
+	return entry number if the symbol is a function and it has been forward declared of defined
 */	
 int lookup_symbol(char *name, int scope_level, int symbol_num)
 {
@@ -1955,7 +2265,7 @@ int lookup_symbol(char *name, int scope_level, int symbol_num)
 	{
 		if(strcmp(name, symbol_table[i]->name)==0 && symbol_table[i]->scope_level==scope_level)
 		{
-			if(symbol_table[i]->forward==1)
+			if(symbol_table[i]->forward==1 || symbol_table[i]->forward==2)
 				return i;
 			else
 				return -2;
@@ -2009,7 +2319,7 @@ int get_register(struct symbol **table, char *name, int scope_level, int symbol_
 		}
 	}
 
-	return -1;
+	return -2;	// Not found
 }
 
 char* get_type(char *name, int scope_level, int symbol_num)
