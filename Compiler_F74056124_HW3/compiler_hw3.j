@@ -1,34 +1,34 @@
 .class public compiler_hw3
 .super java/lang/Object
-.field public static c F = 1.500000
-.method public static loop(II)Z
+.method public static foo(I)F
 .limit stack 50
 .limit locals 50
-BEGIN1_1:
 	iload 0
-	iload 1
-	isub
-	ifgt TRUE1_1
-	goto FALSE1_1
-TRUE1_1:
-	iload 0
-	ldc 1
-	isub
+	ldc 6
+	iadd
 	istore 0
-	goto BEGIN1_1
-FALSE1_1:
-	ldc 1
-	ireturn
+	ldc 3.000000
+	freturn
+.end method
+.method public static lol(I)V
+.limit stack 50
+.limit locals 50
+	iload 0
+	getstatic java/lang/System/out Ljava/io/PrintStream;
+	swap
+	invokevirtual java/io/PrintStream/println(I)V
+	return
 .end method
 .method public static main([Ljava/lang/String;)V
 .limit stack 50
 .limit locals 50
 	ldc 0
 	istore 0
-	ldc 0
-	istore 1
-	ldc 5
-	istore 2
-	iload 2
-	ldc 10
-	isub
+	ldc 4
+	invokestatic compiler_hw3/foo(I)F
+	f2i
+	istore 0
+	iload 0
+	invokestatic compiler_hw3/lol(I)V
+	return
+.end method

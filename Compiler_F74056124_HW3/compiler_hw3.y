@@ -40,6 +40,7 @@ int while_exitFlag[50] = {0};	// whether current while_group should exit later
 int zero_flag = 0;
 int invoke_flag = 0;
 char invoke_arg[BUF_SIZE] = {0};
+int gencode_flag = 1;
 
 FILE *file; // To generate .j file for Jasmin
 
@@ -1034,7 +1035,6 @@ postfix_expr
 				else if(strcmp(type, "void")==0)
 				{
 					fprintf(file, "V\n");
-					op_type = 'V';
 				}
 				else if(strcmp(type, "string")==0)
 				{
@@ -1099,14 +1099,17 @@ postfix_expr
 				if(strcmp(type, "int")==0)
 				{
 					fprintf(file, "I\n");
+					op_type = 'I';
 				}
 				else if(strcmp(type, "float")==0)
 				{
 					fprintf(file, "F\n");
+					op_type = 'F';
 				}
 				else if(strcmp(type, "bool")==0)
 				{
 					fprintf(file, "Z\n");
+					op_type = 'Z';
 				}
 				else if(strcmp(type, "void")==0)
 				{
@@ -1115,6 +1118,7 @@ postfix_expr
 				else if(strcmp(type, "string")==0)
 				{
 					fprintf(file, "Ljava/lang/String;\n");
+					op_type = 's';
 				}			
 			}
 			memset(invoke_arg,0,sizeof(invoke_arg));
@@ -2219,6 +2223,11 @@ int main(int argc, char** argv)
 		printf("\nTotal lines: %d \n",yylineno);
     }
     fclose(file);
+
+	if(gencode_flag != 1)
+	{
+		remove("compiler_hw3.j");
+	}
     return 0;
 }
 
@@ -2234,6 +2243,7 @@ void yyerror(char *s)
     printf("| %s", s);
     printf("\n|-----------------------------------------------|\n\n");
 	err_flag = 1;
+	gencode_flag = 0;
 	memset(buf,0,sizeof(buf));
 }
 
@@ -2246,6 +2256,7 @@ void semantic_error()
 	else if(err_flag==3)
 		printf("| %s", err_type);
     printf("\n|-----------------------------------------------|\n\n");
+	gencode_flag = 0;
 	err_flag = 0;	// reset
 }
 
