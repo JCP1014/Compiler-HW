@@ -1,17 +1,8 @@
-float foo(int a) {
-   a += 6;
-   return 3.0;
-}
+int a = 6;
+int b;
+void main() {
+    float d = 4 + a;
+    print(d);
 
-void lol(int a) {
-    print(a);
-	return;
+    return;
 }
-
-void main(){
-   int a;
-   a = foo(4);
-   lol(a);
-   return;
-}
-

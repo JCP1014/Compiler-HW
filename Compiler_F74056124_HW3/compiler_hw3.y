@@ -284,6 +284,129 @@ declaration
 				set_err(2,"Redeclared variable",$2);
 			}
 		}
+	| type ID ASGN expr SEMICOLON
+	{
+		if(lookup_symbol($2, scope, symbol_num) != -2)
+			{
+				if(scope==0)
+				{
+					insert_symbol(symbol_num, $2, "variable", $1, scope, NULL, 0, -1);
+					if(strcmp($1,"int")==0)
+					{
+						if(op_type == 0 || op_type == 'I')
+							fprintf(file,"\tputstatic %s/%s I\n", CLASS_NAME, $2);
+						else if(op_type == 'F')
+						{
+							fprintf(file,"\tf2i\n"
+										"\tputstatic %s/%s I\n", CLASS_NAME, $2);
+						}
+					}
+					else if(strcmp($1, "float")==0)
+					{
+						if(op_type == 0 || op_type == 'F')
+							fprintf(file,"\tputstatic %s/%s F\n", CLASS_NAME, $2);
+						else if(op_type == 'I')
+						{
+							fprintf(file,"\ti2f\n"
+										"\tputstatic %s/%s F\n", CLASS_NAME, $2);
+						}
+					}
+					else if(strcmp($1, "bool")==0)
+						fprintf(file,"\tputstatic %s/%s Z\n", CLASS_NAME, $2);
+					else if(strcmp($1, "void")==0)
+						fprintf(file,"\tputstatic %s/%s V\n", CLASS_NAME, $2);
+					else if(strcmp($1, "string")==0)
+						fprintf(file,"\tputstatic %s/%s Ljava/lang/String;\n", CLASS_NAME, $2);
+	
+				}
+				else
+				{
+					if(func_flag == 1)
+					{
+						insert_symbol(symbol_num, $2, "variable", $1, scope, NULL, 0, funcReg_num);
+						if(strcmp($1,"int")==0)
+						{	
+							if(op_type == 0 || op_type == 'I')
+								fprintf(file,"\tistore %d\n",funcReg_num);
+							else if(op_type == 'F')
+							{
+								fprintf(file,"\tf2i\n"
+											"\tistore %d\n",funcReg_num);
+							}
+						}
+						else if(strcmp($1, "float")==0)
+						{	
+							if(op_type == 0 || op_type == 'F')
+								fprintf(file,"\tfstore %d\n", funcReg_num);
+							else if(op_type == 'I')
+							{
+								fprintf(file,"\ti2f\n"
+											"\tfstore %d\n",funcReg_num);
+							}
+						}
+						else if(strcmp($1, "bool")==0)
+						{
+							if(op_type == 0 || op_type == 'I')
+								fprintf(file,"\tistore %d\n",funcReg_num);
+							else if(op_type == 'F')
+							{
+								fprintf(file,"\tf2i\n"
+											"\tistore %d\n",funcReg_num);
+							}
+						}
+						else if(strcmp($1, "string")==0)
+						{	
+							fprintf(file,"\tastore %d\n", funcReg_num);
+						}
+						++funcReg_num;
+					}
+					else
+					{
+						insert_symbol(symbol_num, $2, "variable", $1, scope, NULL, 0, reg_num);
+						if(strcmp($1,"int")==0)
+						{	
+							if(op_type == 0 || op_type == 'I')
+								fprintf(file,"\tistore %d\n",reg_num);
+							else if(op_type == 'F')
+							{
+								fprintf(file,"\tf2i\n"
+											"\tistore %d\n",reg_num);
+							}
+						}
+						else if(strcmp($1, "float")==0)
+						{	
+							if(op_type == 0 || op_type == 'F')
+								fprintf(file,"\tfstore %d\n", reg_num);
+							else if(op_type == 'I')
+							{
+								fprintf(file,"\ti2f\n"
+											"\tfstore %d\n",reg_num);
+							}
+						}
+						else if(strcmp($1, "bool")==0)
+						{
+							if(op_type == 0 || op_type == 'I')
+								fprintf(file,"\tistore %d\n",reg_num);
+							else if(op_type == 'F')
+							{
+								fprintf(file,"\tf2i\n"
+											"\tistore %d\n",reg_num);
+							}
+						}
+						else if(strcmp($1, "string")==0)
+						{	
+							fprintf(file,"\tastore %d\n", reg_num);
+						}
+						++reg_num;
+					}
+				}
+				++symbol_num;
+			}
+			else
+			{
+				set_err(2,"Redeclared variable",$2);
+			}
+	}
    	| type ID SEMICOLON
 		{			
 			if(lookup_symbol($2, scope, symbol_num) != -2)
@@ -1930,14 +2053,6 @@ initializer
 	| F_CONST	{	$$ = $1;	}
 	| TRUE	{	$$ = 1;	}
 	| FALSE	{	$$ = 0;	}
-	| ID
-		{
-			if(lookup_symbol($1, scope, symbol_num) == -1)
-			{
-				set_err(2,"Undeclared variable",$1);
-			}
-		}
-	| expr
 ;
 
 parameter_list
